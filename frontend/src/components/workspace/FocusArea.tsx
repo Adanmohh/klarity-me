@@ -1,0 +1,129 @@
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
+import { CardWithTasks, FocusTask, TaskLane, TaskStatus } from '../../types';
+import { TaskLane as TaskLaneComponent } from './TaskLane';
+import { TaskFilters } from './TaskFilters';
+import { focusTasksAPI } from '../../services/api';
+
+interface FocusAreaProps {
+  card: CardWithTasks;
+}
+
+export const FocusArea: React.FC<FocusAreaProps> = ({ card }) => {
+  const [tasks, setTasks] = useState(card.focus_tasks);
+  const [activeFilters, setActiveFilters] = useState({
+    tags: [] as string[],
+    dateRange: null as { start: Date; end: Date } | null
+  });
+
+  const controllerTasks = tasks.filter(task => task.lane === TaskLane.CONTROLLER);
+  const mainTasks = tasks.filter(task => task.lane === TaskLane.MAIN);
+
+  const filteredMainTasks = mainTasks.filter(task => {
+    // Filter by tags
+    if (activeFilters.tags.length > 0) {
+      const hasMatchingTag = task.tags.some(tag => 
+        activeFilters.tags.includes(tag)
+      );
+      if (!hasMatchingTag) return false;
+    }
+
+    // Filter by date range
+    if (activeFilters.dateRange && task.date) {
+      const taskDate = new Date(task.date);
+      if (taskDate < activeFilters.dateRange.start || taskDate > activeFilters.dateRange.end) {
+        return false;
+      }
+    }
+
+    return true;
+  });
+
+  const handleCreateTask = async (title: string, lane: TaskLane) => {
+    try {
+      const newTask = await focusTasksAPI.createTask({
+        title,
+        card_id: card.id,
+        lane,
+        position: tasks.filter(t => t.lane === lane).length
+      });
+      setTasks([...tasks, newTask]);
+    } catch (error) {
+      console.error('Failed to create task:', error);
+    }
+  };
+
+  const handleUpdateTask = async (taskId: string, updates: Partial<FocusTask>) => {
+    try {
+      const updatedTask = await focusTasksAPI.updateTask(taskId, updates);
+      setTasks(tasks.map(task => 
+        task.id === taskId ? updatedTask : task
+      ));
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
+  };
+
+  const handleDeleteTask = async (taskId: string) => {
+    try {
+      await focusTasksAPI.deleteTask(taskId);
+      setTasks(tasks.filter(task => task.id !== taskId));
+    } catch (error) {
+      console.error('Failed to delete task:', error);
+    }
+  };
+
+  const handleMoveTask = async (taskId: string, toLane: TaskLane) => {
+    const task = tasks.find(t => t.id === taskId);
+    if (!task) return;
+
+    try {
+      await handleUpdateTask(taskId, { lane: toLane });
+    } catch (error) {
+      console.error('Failed to move task:', error);
+    }
+  };
+
+  const allTags = Array.from(new Set(tasks.flatMap(task => task.tags)));
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="space-y-6"
+    >
+      <TaskFilters
+        availableTags={allTags}
+        activeFilters={activeFilters}
+        onFiltersChange={setActiveFilters}
+      />
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <TaskLaneComponent
+          title="Controller"
+          subtitle="Dump miscellaneous tasks here"
+          tasks={controllerTasks}
+          onCreateTask={(title) => handleCreateTask(title, TaskLane.CONTROLLER)}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
+          onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.MAIN)}
+          moveButtonText="Move to Main →"
+          taskType="focus"
+        />
+
+        <TaskLaneComponent
+          title="Main Task List"
+          subtitle="Organized focus tasks"
+          tasks={filteredMainTasks}
+          onCreateTask={(title) => handleCreateTask(title, TaskLane.MAIN)}
+          onUpdateTask={handleUpdateTask}
+          onDeleteTask={handleDeleteTask}
+          onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.CONTROLLER)}
+          moveButtonText="← Move to Controller"
+          taskType="focus"
+          showFilters
+        />
+      </div>
+    </motion.div>
+  );
+};

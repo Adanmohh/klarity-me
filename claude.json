@@ -1,0 +1,58 @@
+{
+  "mcpServers": {
+    "context7": {
+      "command": "node",
+      "args": [
+        "C:/Users/Omistaja/Desktop/context7/dist/index.js"
+      ],
+      "disabled": false,
+      "autoApprove": [],
+      "alwaysAllow": [
+        "resolve-library-id",
+        "get-library-docs"
+      ]
+    },
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@executeautomation/playwright-mcp-server"
+      ]
+    },
+    "elevenlabs": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "elevenlabs-mcp-server"
+      ],
+      "env": {
+        "ELEVENLABS_API_KEY": "sk_5b8303c5b88a39e5aef95c628701ca638ea3b959a45f86ef"
+      }
+    },
+    "magicui": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@magicuidesign/mcp@latest"
+      ]
+    },
+    "youtube-transcript": {
+      "command": "cmd",
+      "args": [
+        "/c",
+        "npx",
+        "-y",
+        "@bingyin/youtube-mcp"
+      ],
+      "disabled": false,
+      "autoApprove": [],
+      "alwaysAllow": [
+        "get_subtitles",
+        "extract_subtitles",
+        "download_subtitles"
+      ]
+    }
+  }
+}
