@@ -4,6 +4,7 @@ import { CardWithTasks, FocusTask, TaskLane, TaskStatus } from '../../types';
 import { TaskLane as TaskLaneComponent } from './TaskLane';
 import { TaskFilters } from './TaskFilters';
 import { focusTasksAPI } from '../../services/api';
+import { Button } from '../ui/Button';
 
 interface FocusAreaProps {
   card: CardWithTasks;
@@ -11,13 +12,17 @@ interface FocusAreaProps {
 
 export const FocusArea: React.FC<FocusAreaProps> = ({ card }) => {
   const [tasks, setTasks] = useState(card.focus_tasks);
+  const [showArchived, setShowArchived] = useState(false);
   const [activeFilters, setActiveFilters] = useState({
     tags: [] as string[],
     dateRange: null as { start: Date; end: Date } | null
   });
 
-  const controllerTasks = tasks.filter(task => task.lane === TaskLane.CONTROLLER);
-  const mainTasks = tasks.filter(task => task.lane === TaskLane.MAIN);
+  const activeTasks = tasks.filter(task => task.status !== TaskStatus.ARCHIVED);
+  const archivedTasks = tasks.filter(task => task.status === TaskStatus.ARCHIVED);
+  
+  const controllerTasks = activeTasks.filter(task => task.lane === TaskLane.CONTROLLER);
+  const mainTasks = activeTasks.filter(task => task.lane === TaskLane.MAIN);
 
   const filteredMainTasks = mainTasks.filter(task => {
     // Filter by tags
@@ -64,12 +69,34 @@ export const FocusArea: React.FC<FocusAreaProps> = ({ card }) => {
     }
   };
 
+  const handleArchiveTask = async (taskId: string) => {
+    try {
+      const updatedTask = await focusTasksAPI.updateTask(taskId, { status: TaskStatus.ARCHIVED });
+      setTasks(tasks.map(task => 
+        task.id === taskId ? updatedTask : task
+      ));
+    } catch (error) {
+      console.error('Failed to archive task:', error);
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
       await focusTasksAPI.deleteTask(taskId);
       setTasks(tasks.filter(task => task.id !== taskId));
     } catch (error) {
       console.error('Failed to delete task:', error);
+    }
+  };
+
+  const handleRestoreTask = async (taskId: string) => {
+    try {
+      const updatedTask = await focusTasksAPI.updateTask(taskId, { status: TaskStatus.ACTIVE });
+      setTasks(tasks.map(task => 
+        task.id === taskId ? updatedTask : task
+      ));
+    } catch (error) {
+      console.error('Failed to restore task:', error);
     }
   };
 
@@ -92,38 +119,62 @@ export const FocusArea: React.FC<FocusAreaProps> = ({ card }) => {
       animate={{ opacity: 1 }}
       className="space-y-6"
     >
-      <TaskFilters
-        availableTags={allTags}
-        activeFilters={activeFilters}
-        onFiltersChange={setActiveFilters}
-      />
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <TaskLaneComponent
-          title="Controller"
-          subtitle="Dump miscellaneous tasks here"
-          tasks={controllerTasks}
-          onCreateTask={(title) => handleCreateTask(title, TaskLane.CONTROLLER)}
-          onUpdateTask={handleUpdateTask}
-          onDeleteTask={handleDeleteTask}
-          onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.MAIN)}
-          moveButtonText="Move to Main →"
-          taskType="focus"
+      <div className="flex justify-between items-center">
+        <TaskFilters
+          availableTags={allTags}
+          activeFilters={activeFilters}
+          onFiltersChange={setActiveFilters}
         />
-
-        <TaskLaneComponent
-          title="Main Task List"
-          subtitle="Organized focus tasks"
-          tasks={filteredMainTasks}
-          onCreateTask={(title) => handleCreateTask(title, TaskLane.MAIN)}
-          onUpdateTask={handleUpdateTask}
-          onDeleteTask={handleDeleteTask}
-          onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.CONTROLLER)}
-          moveButtonText="← Move to Controller"
-          taskType="focus"
-          showFilters
-        />
+        <Button
+          variant="ghost"
+          onClick={() => setShowArchived(!showArchived)}
+          className="ml-4"
+        >
+          {showArchived ? 'Hide Archived' : 'Show Archived'} ({archivedTasks.length})
+        </Button>
       </div>
+
+      {!showArchived ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <TaskLaneComponent
+            title="Controller"
+            subtitle="Dump miscellaneous tasks here"
+            tasks={controllerTasks}
+            onCreateTask={(title) => handleCreateTask(title, TaskLane.CONTROLLER)}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleArchiveTask}
+            onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.MAIN)}
+            moveButtonText="Move to Main →"
+            taskType="focus"
+          />
+
+          <TaskLaneComponent
+            title="Main Task List"
+            subtitle="Organized focus tasks"
+            tasks={filteredMainTasks}
+            onCreateTask={(title) => handleCreateTask(title, TaskLane.MAIN)}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleArchiveTask}
+            onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.CONTROLLER)}
+            moveButtonText="← Move to Controller"
+            taskType="focus"
+            showFilters
+          />
+        </div>
+      ) : (
+        <TaskLaneComponent
+          title="Archived Tasks"
+          subtitle="Tasks that have been archived"
+          tasks={archivedTasks}
+          onCreateTask={() => {}}
+          onUpdateTask={() => {}}
+          onDeleteTask={handleDeleteTask}
+          onMoveTask={handleRestoreTask}
+          moveButtonText="Restore"
+          taskType="focus"
+          isArchiveView={true}
+        />
+      )}
     </motion.div>
   );
 };

@@ -16,6 +16,7 @@ interface TaskLaneProps {
   moveButtonText: string;
   taskType: 'focus' | 'daily';
   showFilters?: boolean;
+  isArchiveView?: boolean;
 }
 
 export const TaskLane: React.FC<TaskLaneProps> = ({
@@ -28,7 +29,8 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
   onMoveTask,
   moveButtonText,
   taskType,
-  showFilters = false
+  showFilters = false,
+  isArchiveView = false
 }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -83,55 +85,58 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
                 onDelete={onDeleteTask}
                 onMove={onMoveTask}
                 moveButtonText={moveButtonText}
+                isArchived={isArchiveView}
               />
             </motion.div>
           ))}
         </AnimatePresence>
       </div>
 
-      {/* Add New Task */}
-      <div className="border-t border-white/20 pt-4">
-        {!showAddForm ? (
-          <Button
-            variant="ghost"
-            onClick={() => setShowAddForm(true)}
-            className="w-full text-gray-600 hover:text-primary-black"
-          >
-            + Add Task
-          </Button>
-        ) : (
-          <form onSubmit={handleSubmit} className="space-y-2">
-            <input
-              type="text"
-              value={newTaskTitle}
-              onChange={(e) => setNewTaskTitle(e.target.value)}
-              placeholder="Enter task title..."
-              className="w-full px-3 py-2 rounded glass-effect border border-white/20 text-sm"
-              autoFocus
-            />
-            <div className="flex space-x-2">
-              <Button
-                type="submit"
-                size="sm"
-                disabled={!newTaskTitle.trim()}
-              >
-                Add
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                onClick={() => {
-                  setShowAddForm(false);
-                  setNewTaskTitle('');
-                }}
-              >
-                Cancel
-              </Button>
-            </div>
-          </form>
-        )}
-      </div>
+      {/* Add New Task - Hide in archive view */}
+      {!isArchiveView && (
+        <div className="border-t border-white/20 pt-4">
+          {!showAddForm ? (
+            <Button
+              variant="ghost"
+              onClick={() => setShowAddForm(true)}
+              className="w-full text-gray-600 hover:text-primary-black"
+            >
+              + Add Task
+            </Button>
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-2">
+              <input
+                type="text"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="Enter task title..."
+                className="w-full px-3 py-2 rounded glass-effect border border-white/20 text-sm"
+                autoFocus
+              />
+              <div className="flex space-x-2">
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={!newTaskTitle.trim()}
+                >
+                  Add
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewTaskTitle('');
+                  }}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          )}
+        </div>
+      )}
 
       {/* Completed Tasks */}
       {completedTasks.length > 0 && (

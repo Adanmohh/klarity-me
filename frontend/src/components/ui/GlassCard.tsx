@@ -5,7 +5,7 @@ import { cn } from '../../utils/cn';
 interface GlassCardProps {
   children: React.ReactNode;
   className?: string;
-  variant?: 'default' | 'elevated' | 'subtle' | 'dark' | 'gold';
+  variant?: 'default' | 'elevated' | 'subtle' | 'dark' | 'gold' | 'solid';
   onClick?: () => void;
   animate?: boolean;
   hoverable?: boolean;
@@ -17,39 +17,52 @@ interface GlassCardProps {
 
 const variantClasses = {
   default: {
-    background: 'bg-white/80',
-    border: 'border-gray-200',
-    blur: 'backdrop-blur-sm',
-    shadow: 'shadow-md',
-    hover: 'hover:bg-white/90 hover:border-gray-300 hover:shadow-lg',
+    background: 'bg-glass-whiteHeavy dark:bg-glass-darkHeavy',
+    border: 'border-neutral-200 dark:border-neutral-700',
+    blur: 'backdrop-blur-md',
+    shadow: 'shadow-elevation-2',
+    hover: 'hover:bg-white hover:shadow-elevation-3 dark:hover:bg-neutral-900',
+    text: 'text-neutral-900 dark:text-neutral-100',
   },
   elevated: {
-    background: 'bg-white/90',
-    border: 'border-gray-300',
-    blur: 'backdrop-blur-md',
-    shadow: 'shadow-xl',
-    hover: 'hover:bg-white/95 hover:border-gray-400 hover:shadow-2xl',
+    background: 'bg-white dark:bg-neutral-900',
+    border: 'border-neutral-300 dark:border-neutral-700',
+    blur: 'backdrop-blur-lg',
+    shadow: 'shadow-elevation-3',
+    hover: 'hover:shadow-elevation-4',
+    text: 'text-neutral-900 dark:text-neutral-100',
   },
   subtle: {
-    background: 'bg-white/60',
-    border: 'border-gray-100',
+    background: 'bg-glass-whiteLight dark:bg-glass-darkLight',
+    border: 'border-neutral-200/50 dark:border-neutral-700/50',
     blur: 'backdrop-blur-sm',
-    shadow: 'shadow-sm',
-    hover: 'hover:bg-white/70 hover:border-gray-200 hover:shadow-md',
+    shadow: 'shadow-elevation-1',
+    hover: 'hover:bg-glass-white hover:shadow-elevation-2 dark:hover:bg-glass-dark',
+    text: 'text-neutral-800 dark:text-neutral-200',
   },
   dark: {
-    background: 'bg-gray-800/95',
-    border: 'border-gray-700',
-    blur: 'backdrop-blur-sm',
-    shadow: 'shadow-xl shadow-black/30',
-    hover: 'hover:bg-gray-800 hover:border-gray-600',
+    background: 'bg-neutral-900 dark:bg-neutral-950',
+    border: 'border-neutral-800 dark:border-neutral-800',
+    blur: '',
+    shadow: 'shadow-elevation-3 shadow-black/30',
+    hover: 'hover:bg-neutral-800 dark:hover:bg-neutral-900',
+    text: 'text-white',
   },
   gold: {
-    background: 'bg-gradient-to-br from-yellow-50 to-amber-50',
-    border: 'border-yellow-400/40',
+    background: 'bg-gradient-to-br from-primary-50 to-primary-100 dark:from-primary-900/20 dark:to-primary-800/20',
+    border: 'border-primary-300 dark:border-primary-700',
     blur: 'backdrop-blur-sm',
-    shadow: 'shadow-lg shadow-yellow-400/20',
-    hover: 'hover:from-yellow-100 hover:to-amber-100 hover:border-yellow-400/60',
+    shadow: 'shadow-gold-sm',
+    hover: 'hover:from-primary-100 hover:to-primary-200 hover:shadow-gold dark:hover:from-primary-800/30 dark:hover:to-primary-700/30',
+    text: 'text-neutral-900 dark:text-primary-100',
+  },
+  solid: {
+    background: 'bg-white dark:bg-neutral-800',
+    border: 'border-neutral-200 dark:border-neutral-700',
+    blur: '',
+    shadow: 'shadow-elevation-1',
+    hover: 'hover:shadow-elevation-2',
+    text: 'text-neutral-900 dark:text-neutral-100',
   },
 };
 
@@ -80,6 +93,10 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     initial: { opacity: 0, y: 20 },
     animate: { opacity: 1, y: 0 },
     transition: { duration: 0.3, ease: 'easeOut' }
+  } : animate ? {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    transition: { duration: 0.3, ease: 'easeOut' }
   } : {};
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -93,29 +110,29 @@ export const GlassCard: React.FC<GlassCardProps> = ({
     <MotionComponent
       className={cn(
         // Base styles
-        'rounded-2xl p-6 transition-all duration-300 ease-out',
+        'rounded-xl p-6 transition-all duration-250 ease-out',
         
         // Variant styles
         variantStyle.background,
         variantStyle.blur,
         variantStyle.border,
         variantStyle.shadow,
+        variantStyle.text,
         'border',
         
         // Interactive states
         isInteractive && [
           'cursor-pointer',
           variantStyle.hover,
-          'hover:shadow-2xl',
         ],
         
         // Focus states for accessibility (WCAG compliant)
         isInteractive && [
           'focus-visible:outline-none',
           'focus-visible:ring-2',
-          'focus-visible:ring-primary-gold',
+          'focus-visible:ring-primary-500',
           'focus-visible:ring-offset-2',
-          'focus-visible:ring-offset-white dark:focus-visible:ring-offset-gray-900',
+          'focus-visible:ring-offset-white dark:focus-visible:ring-offset-neutral-900',
         ],
         
         // Active state

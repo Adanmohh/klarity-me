@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { AuthToken, LoginRequest, RegisterRequest, User, Card, CardWithTasks, FocusTask, DailyTask } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

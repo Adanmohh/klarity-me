@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Card } from '../../types';
-import { GlassCard } from '../ui/GlassCard';
-import { Button } from '../ui/Button';
-import { ChevronLeftIcon } from '../icons/Icons';
+import { Card, CardWithTasks } from '../../types';
+import { FocusArea } from '../workspace/FocusArea';
+import { ArrowLeft } from 'lucide-react';
+import { focusTasksAPI } from '../../services/api';
 
 interface CardDetailViewProps {
   card: Card;
@@ -11,71 +11,91 @@ interface CardDetailViewProps {
 }
 
 export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onBack }) => {
+  const [cardWithTasks, setCardWithTasks] = useState<CardWithTasks | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // Fetch tasks for this card
+    const loadTasks = async () => {
+      try {
+        const tasks = await focusTasksAPI.getTasksByCard(card.id);
+        setCardWithTasks({
+          ...card,
+          focus_tasks: tasks,
+          daily_tasks: []
+        });
+      } catch (error) {
+        console.error('Failed to load tasks:', error);
+        // Even on error, set the card with empty tasks
+        setCardWithTasks({
+          ...card,
+          focus_tasks: [],
+          daily_tasks: []
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadTasks();
+  }, [card]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
+      </div>
+    );
+  }
+
+  if (!cardWithTasks) {
+    return (
+      <div className="p-8 text-center">
+        <p className="text-gray-500">Unable to load card details</p>
+        <button onClick={onBack} className="mt-4 text-primary-500 hover:text-primary-600">
+          Back to Focus Area
+        </button>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 p-8">
-      <div className="max-w-4xl mx-auto">
+    <div className="p-8">
+      <div className="max-w-6xl mx-auto">
         {/* Back Button */}
         <motion.button
           onClick={onBack}
-          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-primary-black transition-colors"
+          className="flex items-center gap-2 mb-6 text-gray-600 hover:text-gray-900 transition-colors"
           whileHover={{ x: -4 }}
         >
-          <ChevronLeftIcon />
-          <span className="font-medium">Back to Cards</span>
+          <ArrowLeft className="w-5 h-5" />
+          <span className="font-medium">Back to Focus Area</span>
         </motion.button>
 
-        {/* Card Detail */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-        >
-          <GlassCard className="p-8">
-            <div className="flex items-start justify-between mb-6">
-              <div>
-                <h1 className="text-4xl font-bold text-primary-black mb-2">
-                  {card.title}
-                </h1>
+        {/* Card Header */}
+        <div className="mb-6">
+          <div className="flex items-start justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 mb-2">
+                {card.title}
+              </h1>
+              {card.description && (
                 <p className="text-lg text-gray-600">
-                  {card.description || 'No description available'}
+                  {card.description}
                 </p>
-              </div>
-              <span className={`px-4 py-2 rounded-full text-sm font-bold ${
-                card.status === 'active' ? 'bg-green-100 text-green-800' :
-                card.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
-                'bg-gray-100 text-gray-800'
-              }`}>
-                {card.status}
-              </span>
+              )}
             </div>
+            <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+              card.status === 'active' ? 'bg-green-100 text-green-800' :
+              card.status === 'paused' ? 'bg-yellow-100 text-yellow-800' :
+              'bg-gray-100 text-gray-800'
+            }`}>
+              {card.status}
+            </span>
+          </div>
+        </div>
 
-            {/* Two-Lane Task System */}
-            <div className="grid grid-cols-2 gap-6 mt-8">
-              <div>
-                <h2 className="text-xl font-bold text-primary-black mb-4">Controller Lane</h2>
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-gray-500 text-center">No tasks yet</p>
-                  </div>
-                </div>
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-primary-black mb-4">Main Lane</h2>
-                <div className="space-y-3">
-                  <div className="p-4 bg-gray-50 rounded-lg">
-                    <p className="text-gray-500 text-center">No tasks yet</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 mt-8">
-              <Button variant="primary">Add Task</Button>
-              <Button variant="ghost">Edit Card</Button>
-              <Button variant="ghost">Archive</Button>
-            </div>
-          </GlassCard>
-        </motion.div>
+        {/* Focus Area with Task Management */}
+        <FocusArea card={cardWithTasks} />
       </div>
     </div>
   );

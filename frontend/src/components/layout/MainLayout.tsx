@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Sidebar } from './Sidebar';
 import { FloatingActionButton } from './FloatingActionButton';
 import { CommandPalette } from './CommandPalette';
+import { NavigationMenu } from './NavigationMenu';
 import { Dock } from '../ui/Dock';
-import { PlusIcon, CardsIcon, TasksIcon } from '../icons/Icons';
+import { Icons } from '../icons/LucideIcons';
 
 interface MainLayoutProps {
   children: React.ReactNode;
@@ -41,13 +41,13 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     {
       id: 'new-card',
       label: 'New Card',
-      icon: <CardsIcon />,
+      icon: <Icons.Layers />,
       onClick: onCreateCard,
     },
     {
       id: 'new-task',
       label: 'New Task',
-      icon: <TasksIcon />,
+      icon: <Icons.Daily />,
       onClick: onCreateTask,
     },
   ];
@@ -57,55 +57,35 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
     {
       id: 'dashboard',
       label: 'Dashboard',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
-        </svg>
-      ),
+      icon: <Icons.Home />,
       onClick: () => onNavigate('/'),
       isActive: currentRoute === '/',
     },
     {
       id: 'focus',
       label: 'Focus',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-        </svg>
-      ),
+      icon: <Icons.Focus />,
       onClick: () => onNavigate('/focus'),
-      isActive: currentRoute === '/focus',
+      isActive: currentRoute === '/focus' || currentRoute.startsWith('/card/'),
     },
     {
       id: 'daily',
       label: 'Daily',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-        </svg>
-      ),
+      icon: <Icons.Daily />,
       onClick: () => onNavigate('/daily'),
       isActive: currentRoute === '/daily',
     },
     {
       id: 'journal',
       label: 'Dreams',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
-        </svg>
-      ),
+      icon: <Icons.Dreams />,
       onClick: () => onNavigate('/journal'),
       isActive: currentRoute === '/journal',
     },
     {
       id: 'analytics',
       label: 'Analytics',
-      icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-        </svg>
-      ),
+      icon: <Icons.Analytics />,
       onClick: () => onNavigate('/analytics'),
       isActive: currentRoute === '/analytics',
     },
@@ -154,7 +134,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       id: 'create-card',
       label: 'Create New Card',
       shortcut: 'C',
-      icon: <CardsIcon />,
+      icon: <Icons.Layers />,
       category: 'Actions',
       action: onCreateCard,
     },
@@ -162,7 +142,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       id: 'create-task',
       label: 'Create New Task',
       shortcut: 'T',
-      icon: <TasksIcon />,
+      icon: <Icons.Daily />,
       category: 'Actions',
       action: onCreateTask,
     },
@@ -177,12 +157,9 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   ];
 
   return (
-    <div className="flex h-screen bg-gray-50 font-sans">
-      {/* Sidebar */}
-      <Sidebar currentRoute={currentRoute} onNavigate={onNavigate} />
-
+    <div className="h-screen bg-gray-50 font-sans">
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
         <header className="bg-primary-white border-b border-gray-200 px-6 py-4">
           <div className="flex items-center justify-between">
@@ -195,22 +172,36 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               </p>
             </div>
 
-            {/* Command Palette Trigger */}
-            <button
-              onClick={() => setIsCommandPaletteOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
-            >
-              <SearchIcon />
-              <span className="text-sm font-medium text-gray-700">Quick actions</span>
-              <kbd className="px-2 py-1 text-xs font-bold text-gray-500 bg-primary-white rounded">
-                ⌘K
-              </kbd>
-            </button>
+            <div className="flex items-center gap-3">
+              {/* Navigation Menu */}
+              <NavigationMenu 
+                currentRoute={currentRoute}
+                onCreateCard={onCreateCard}
+                onCreateTask={onCreateTask}
+              />
+              
+              {/* Command Palette Trigger */}
+              <button
+                onClick={() => setIsCommandPaletteOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+              >
+                <Icons.Search />
+                <span className="text-sm font-medium text-gray-700 hidden sm:inline">Quick actions</span>
+                <div className="flex items-center gap-1">
+                  <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-500 bg-white border border-gray-300 rounded">
+                    <Icons.Command className="inline w-3 h-3" />
+                  </kbd>
+                  <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-500 bg-white border border-gray-300 rounded">
+                    K
+                  </kbd>
+                </div>
+              </button>
+            </div>
           </div>
         </header>
 
-        {/* Page Content */}
-        <main className="flex-1 overflow-auto">
+        {/* Page Content with padding for dock */}
+        <main className="flex-1 overflow-auto pb-24" role="main">
           <motion.div
             key={currentRoute}
             initial={{ opacity: 0, y: 20 }}
@@ -227,8 +218,8 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       {/* Floating Action Button */}
       <FloatingActionButton actions={fabActions} />
       
-      {/* Bottom Dock Navigation */}
-      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50">
+      {/* Bottom Dock Navigation with proper spacing */}
+      <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 z-50" role="navigation" aria-label="Main navigation">
         <Dock items={dockItems} />
       </div>
 
@@ -244,6 +235,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
 
 // Helper functions
 const getPageTitle = (route: string): string => {
+  // Handle dynamic routes
+  if (route.startsWith('/card/')) {
+    return 'Card Details';
+  }
+  
   const titles: Record<string, string> = {
     '/': 'Dashboard',
     '/focus': 'Focus Area',
@@ -257,6 +253,11 @@ const getPageTitle = (route: string): string => {
 };
 
 const getPageDescription = (route: string): string => {
+  // Handle dynamic routes
+  if (route.startsWith('/card/')) {
+    return 'Manage tasks and track progress';
+  }
+  
   const descriptions: Record<string, string> = {
     '/': 'Your productivity overview at a glance',
     '/focus': 'Manage your focus cards and deep work',
@@ -269,9 +270,3 @@ const getPageDescription = (route: string): string => {
   return descriptions[route] || '';
 };
 
-const SearchIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-    <circle cx="11" cy="11" r="8" />
-    <path d="M21 21l-4.35-4.35" />
-  </svg>
-);

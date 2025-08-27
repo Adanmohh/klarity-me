@@ -1,4 +1,5 @@
 import React, { useMemo, useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Card } from '../types';
 import { cn } from '../utils/cn';
@@ -22,6 +23,7 @@ export const Dashboard: React.FC<DashboardProps> = ({
   completedToday,
   weeklyStreak,
 }) => {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const { fetchCards } = useCardStore();
   const { tasks } = useDailyTaskStore();
@@ -239,7 +241,11 @@ export const Dashboard: React.FC<DashboardProps> = ({
 
               {/* Quick Actions - Stack on mobile */}
               <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <Button variant="primary" className="flex-1 sm:flex-initial">
+                <Button 
+                  variant="primary" 
+                  className="flex-1 sm:flex-initial"
+                  onClick={() => navigate(`/card/${focusCard.id}`)}
+                >
                   Open Card
                 </Button>
                 <Button variant="secondary" className="flex-1 sm:flex-initial">

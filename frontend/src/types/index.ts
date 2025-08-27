@@ -33,7 +33,8 @@ export enum TaskLane {
 export enum TaskStatus {
   PENDING = 'pending',
   ACTIVE = 'active',
-  COMPLETED = 'completed'
+  COMPLETED = 'completed',
+  ARCHIVED = 'archived'
 }
 
 export interface FocusTask {

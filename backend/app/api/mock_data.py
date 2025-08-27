@@ -116,20 +116,44 @@ def get_mock_focus_tasks(card_id: UUID) -> List[FocusTask]:
 
 def create_mock_focus_task(task_data: dict) -> FocusTask:
     """Create a new focus task"""
+    from app.models.focus_task import TaskStatus
+    
     new_task = {
         "id": uuid4(),
         "card_id": task_data.get("card_id"),
         "title": task_data.get("title", "New Task"),
         "description": task_data.get("description", ""),
+        "status": TaskStatus.ACTIVE,  # Add the status field
         "lane": task_data.get("lane", "controller"),
-        "date_filter": task_data.get("date_filter"),
+        "position": task_data.get("position", 0),
+        "date": task_data.get("date"),
         "tags": task_data.get("tags", []),
-        "completed": task_data.get("completed", False),
         "created_at": datetime.now(),
         "updated_at": datetime.now()
     }
     mock_focus_tasks.append(new_task)
     return FocusTask(**new_task)
+
+def update_mock_focus_task(task_id: UUID, updates: dict) -> Optional[FocusTask]:
+    """Update an existing focus task"""
+    for i, task in enumerate(mock_focus_tasks):
+        if task.get("id") == task_id:
+            for key, value in updates.items():
+                if value is not None:
+                    task[key] = value
+            task["updated_at"] = datetime.now()
+            mock_focus_tasks[i] = task
+            return FocusTask(**task)
+    return None
+
+def delete_mock_focus_task(task_id: UUID) -> Optional[FocusTask]:
+    """Delete a focus task"""
+    global mock_focus_tasks
+    for i, task in enumerate(mock_focus_tasks):
+        if task.get("id") == task_id:
+            deleted_task = mock_focus_tasks.pop(i)
+            return FocusTask(**deleted_task)
+    return None
 
 def get_mock_daily_tasks(card_id: UUID) -> List[DailyTask]:
     """Get daily tasks for a card"""

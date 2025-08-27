@@ -76,6 +76,14 @@ async def update_focus_task(
     task_in: FocusTaskUpdate,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
+    if settings.DEV_MODE:
+        # Mock implementation for dev mode
+        from app.api.mock_data import update_mock_focus_task
+        task = update_mock_focus_task(task_id, task_in.dict(exclude_unset=True))
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return task
+    
     task = await focus_task_crud.get(db, id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -95,6 +103,14 @@ async def delete_focus_task(
     task_id: UUID,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
+    if settings.DEV_MODE:
+        # Mock implementation for dev mode
+        from app.api.mock_data import delete_mock_focus_task
+        task = delete_mock_focus_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return task
+    
     task = await focus_task_crud.get(db, id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")

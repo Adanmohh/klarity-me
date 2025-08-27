@@ -3,6 +3,8 @@ import { motion } from 'framer-motion';
 import { FocusTask, DailyTask, TaskStatus, DailyTaskStatus, TaskDuration } from '../../types';
 import { Button } from '../ui/Button';
 import { MagicCard } from '../ui/MagicCard';
+import { Icons } from '../icons/LucideIcons';
+import { ConfirmDialog } from '../ui/ConfirmDialog';
 
 interface TaskCardProps {
   task: FocusTask | DailyTask;
@@ -11,6 +13,7 @@ interface TaskCardProps {
   onDelete: (taskId: string) => void;
   onMove: (taskId: string) => void;
   moveButtonText: string;
+  isArchived?: boolean;
 }
 
 export const TaskCard: React.FC<TaskCardProps> = ({
@@ -19,9 +22,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onUpdate,
   onDelete,
   onMove,
-  moveButtonText
+  moveButtonText,
+  isArchived = false
 }) => {
   const [isEditing, setIsEditing] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
   const [editDescription, setEditDescription] = useState(
     taskType === 'focus' ? (task as FocusTask).description || '' : ''
@@ -138,11 +143,12 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   }
 
   return (
-    <MagicCard
-      className={`task-card group ${isCompleted ? 'opacity-60' : ''}`}
-      gradientColor={taskType === 'focus' ? '#FFD700' : '#60A5FA'}
-      gradientOpacity={0.2}
-    >
+    <>
+      <MagicCard
+        className={`task-card group ${isCompleted ? 'opacity-60' : ''}`}
+        gradientColor={taskType === 'focus' ? '#FFD700' : '#60A5FA'}
+        gradientOpacity={0.2}
+      >
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-primary-black'}`}>
@@ -156,10 +162,11 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               Edit
             </button>
             <button
-              onClick={() => onDelete(task.id)}
+              onClick={() => setShowDeleteConfirm(true)}
               className="text-xs text-red-500 hover:text-red-700"
+              aria-label={isArchived ? "Delete task" : "Archive task"}
             >
-              Delete
+              {isArchived ? 'Delete' : 'Archive'}
             </button>
           </div>
         </div>
@@ -199,25 +206,41 @@ export const TaskCard: React.FC<TaskCardProps> = ({
           </div>
 
           <div className="flex space-x-1">
-            <Button
-              size="sm"
-              variant={isCompleted ? "primary" : "secondary"}
-              onClick={handleToggleComplete}
-            >
-              {isCompleted ? '↺' : '✓'}
-            </Button>
+            {!isArchived && (
+              <Button
+                size="sm"
+                variant={isCompleted ? "primary" : "secondary"}
+                onClick={handleToggleComplete}
+              >
+                {isCompleted ? <Icons.Refresh className="w-4 h-4" /> : <Icons.Check className="w-4 h-4" />}
+              </Button>
+            )}
             
             <Button
               size="sm"
-              variant="ghost"
+              variant={isArchived ? "primary" : "ghost"}
               onClick={() => onMove(task.id)}
               title={moveButtonText}
             >
-              ⇄
+              {isArchived ? <Icons.Refresh className="w-4 h-4" /> : <Icons.Move className="w-4 h-4" />}
             </Button>
           </div>
         </div>
       </div>
-    </MagicCard>
+      </MagicCard>
+      
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        title={isArchived ? "Delete Task" : "Archive Task"}
+        message={isArchived 
+          ? `Are you sure you want to permanently delete "${task.title}"? This action cannot be undone.`
+          : `Are you sure you want to archive "${task.title}"? You can restore it later from the archive.`}
+        confirmText={isArchived ? "Delete Permanently" : "Archive"}
+        cancelText="Cancel"
+        variant={isArchived ? "danger" : "warning"}
+        onConfirm={() => onDelete(task.id)}
+        onCancel={() => setShowDeleteConfirm(false)}
+      />
+    </>
   );
 };

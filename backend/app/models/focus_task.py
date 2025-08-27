@@ -17,6 +17,7 @@ class TaskStatus(str, enum.Enum):
     PENDING = "pending"
     ACTIVE = "active"
     COMPLETED = "completed"
+    ARCHIVED = "archived"
 
 
 class FocusTask(Base):
