@@ -1,10 +1,9 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { motion } from 'framer-motion';
 import { CardWithTasks } from '../../types';
 import { Button } from '../ui/Button';
 import { GlassCard } from '../ui/GlassCard';
 import { FocusArea } from './FocusArea';
-import { DailyTasksArea } from './DailyTasksArea';
 import { CardControls } from './CardControls';
 
 interface CardWorkspaceProps {
@@ -16,8 +15,6 @@ export const CardWorkspace: React.FC<CardWorkspaceProps> = ({
   card,
   onClose
 }) => {
-  const [currentArea, setCurrentArea] = useState<'focus' | 'daily'>('focus');
-
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -50,41 +47,8 @@ export const CardWorkspace: React.FC<CardWorkspaceProps> = ({
         <CardControls card={card} />
       </GlassCard>
 
-      {/* Area Toggle */}
-      <div className="flex justify-center">
-        <div className="glass-effect rounded-lg p-1 inline-flex">
-          <Button
-            variant={currentArea === 'focus' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setCurrentArea('focus')}
-            className="rounded-md"
-          >
-            Focus Area
-          </Button>
-          <Button
-            variant={currentArea === 'daily' ? 'primary' : 'ghost'}
-            size="sm"
-            onClick={() => setCurrentArea('daily')}
-            className="rounded-md"
-          >
-            Daily Tasks
-          </Button>
-        </div>
-      </div>
-
-      {/* Current Area */}
-      <motion.div
-        key={currentArea}
-        initial={{ opacity: 0, x: 20 }}
-        animate={{ opacity: 1, x: 0 }}
-        transition={{ duration: 0.3 }}
-      >
-        {currentArea === 'focus' ? (
-          <FocusArea card={card} />
-        ) : (
-          <DailyTasksArea card={card} />
-        )}
-      </motion.div>
+      {/* Focus Area with tasks */}
+      <FocusArea card={card} />
     </motion.div>
   );
 };

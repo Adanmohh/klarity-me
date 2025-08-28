@@ -71,7 +71,7 @@ export const DailyTasksView: React.FC = () => {
     if (!task) return;
 
     try {
-      let updatedTask;
+      let updatedTask: DailyTask;
       if (task.status === DailyTaskStatus.COMPLETED) {
         updatedTask = await dailyTasksAPI.reopenTask(taskId);
       } else {

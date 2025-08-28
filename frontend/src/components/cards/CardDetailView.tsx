@@ -26,8 +26,7 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onBack }) 
         // Even on error, set the card with empty tasks
         setCardWithTasks({
           ...card,
-          focus_tasks: [],
-          daily_tasks: []
+          focus_tasks: []
         });
       } finally {
         setLoading(false);

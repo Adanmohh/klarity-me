@@ -69,15 +69,13 @@ export const Dashboard: React.FC<DashboardProps> = ({
   const activeCards = cards.filter(c => c.status === 'active');
   const focusCard = activeCards[0];
   
-  // Calculate real progress for focus card
-  const focusCardProgress = useMemo(() => {
-    if (!focusCard) return 0;
-    const cardTasks = tasks.filter(t => t.card_id === focusCard.id);
-    const completedCardTasks = cardTasks.filter(t => t.status === DailyTaskStatus.COMPLETED);
-    return cardTasks.length > 0 
-      ? Math.round((completedCardTasks.length / cardTasks.length) * 100)
+  // Calculate overall daily tasks progress
+  const dailyTasksProgress = useMemo(() => {
+    const completedTasks = tasks.filter(t => t.status === DailyTaskStatus.COMPLETED);
+    return tasks.length > 0 
+      ? Math.round((completedTasks.length / tasks.length) * 100)
       : 0;
-  }, [focusCard, tasks]);
+  }, [tasks]);
 
   useEffect(() => {
     // Simulate loading real data
@@ -226,14 +224,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
                 <div className="flex justify-between text-sm mb-2">
                   <span className="text-gray-600 dark:text-gray-400">Progress</span>
                   <span className="font-bold text-gray-900 dark:text-white">
-                    {focusCardProgress}%
+                    {dailyTasksProgress}%
                   </span>
                 </div>
                 <div className="h-3 bg-gray-200 dark:bg-gray-700 rounded-full overflow-hidden">
                   <motion.div
                     className="h-full bg-gradient-to-r from-primary-gold to-yellow-500"
                     initial={{ width: 0 }}
-                    animate={{ width: `${focusCardProgress}%` }}
+                    animate={{ width: `${dailyTasksProgress}%` }}
                     transition={{ duration: 1, delay: 0.5 }}
                   />
                 </div>

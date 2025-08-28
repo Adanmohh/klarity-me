@@ -47,8 +47,7 @@ export const FocusSessionView: React.FC<FocusSessionViewProps> = ({
         // Even on error, set the card with empty tasks
         setCardWithTasks({
           ...card,
-          focus_tasks: [],
-          daily_tasks: []
+          focus_tasks: []
         });
       } finally {
         setLoading(false);
