@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { FloatingActionButton } from './FloatingActionButton';
 import { CommandPalette } from './CommandPalette';
 import { NavigationMenu } from './NavigationMenu';
+import { ThemeToggle } from '../ui/ThemeToggle';
 import { Dock } from '../ui/Dock';
 import { Icons } from '../icons/LucideIcons';
 
@@ -12,6 +13,8 @@ interface MainLayoutProps {
   onNavigate: (route: string) => void;
   onCreateCard: () => void;
   onCreateTask: () => void;
+  isCommandPaletteOpen?: boolean;
+  onCloseCommandPalette?: () => void;
 }
 
 export const MainLayout: React.FC<MainLayoutProps> = ({
@@ -20,21 +23,20 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   onNavigate,
   onCreateCard,
   onCreateTask,
+  isCommandPaletteOpen: isCommandPaletteOpenProp = false,
+  onCloseCommandPalette,
 }) => {
-  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [localCommandPaletteOpen, setLocalCommandPaletteOpen] = useState(false);
+  const isCommandPaletteOpen = isCommandPaletteOpenProp || localCommandPaletteOpen;
 
-  // Command palette keyboard shortcut
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault();
-        setIsCommandPaletteOpen(true);
-      }
-    };
-
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, []);
+  const handleCloseCommandPalette = () => {
+    setLocalCommandPaletteOpen(false);
+    onCloseCommandPalette?.();
+  };
+  
+  const handleOpenCommandPalette = () => {
+    setLocalCommandPaletteOpen(true);
+  };
 
   // FAB actions
   const fabActions = [
@@ -55,18 +57,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   // Dock navigation items
   const dockItems = [
     {
-      id: 'dashboard',
-      label: 'Dashboard',
-      icon: <Icons.Home />,
-      onClick: () => onNavigate('/'),
-      isActive: currentRoute === '/',
-    },
-    {
       id: 'focus',
       label: 'Focus',
       icon: <Icons.Focus />,
-      onClick: () => onNavigate('/focus'),
-      isActive: currentRoute === '/focus' || currentRoute.startsWith('/card/'),
+      onClick: () => onNavigate('/'),
+      isActive: currentRoute === '/' || currentRoute === '/focus',
     },
     {
       id: 'daily',
@@ -95,18 +90,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   const commands = [
     // Navigation
     {
-      id: 'nav-dashboard',
-      label: 'Go to Dashboard',
-      shortcut: 'G D',
-      category: 'Navigation',
-      action: () => onNavigate('/'),
-    },
-    {
       id: 'nav-focus',
-      label: 'Go to Focus Area',
+      label: 'Go to Focus Queue',
       shortcut: 'G F',
       category: 'Navigation',
-      action: () => onNavigate('/focus'),
+      action: () => onNavigate('/'),
     },
     {
       id: 'nav-daily',
@@ -157,22 +145,25 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
   ];
 
   return (
-    <div className="h-screen bg-gray-50 font-sans">
+    <div className="h-screen bg-gray-50 dark:bg-neutral-950 font-sans">
       {/* Main Content Area */}
       <div className="flex flex-col h-full overflow-hidden">
         {/* Header */}
-        <header className="bg-primary-white border-b border-gray-200 px-6 py-4">
+        <header className="bg-primary-white dark:bg-neutral-900 border-b border-gray-200 dark:border-neutral-800 px-6 py-4">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-primary-black">
+              <h1 className="text-2xl font-bold text-primary-black dark:text-white">
                 {getPageTitle(currentRoute)}
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 {getPageDescription(currentRoute)}
               </p>
             </div>
 
             <div className="flex items-center gap-3">
+              {/* Theme Toggle */}
+              <ThemeToggle />
+              
               {/* Navigation Menu */}
               <NavigationMenu 
                 currentRoute={currentRoute}
@@ -182,11 +173,11 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
               
               {/* Command Palette Trigger */}
               <button
-                onClick={() => setIsCommandPaletteOpen(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                onClick={handleOpenCommandPalette}
+                className="flex items-center gap-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 dark:bg-neutral-800 dark:hover:bg-neutral-700 rounded-lg transition-colors"
               >
                 <Icons.Search />
-                <span className="text-sm font-medium text-gray-700 hidden sm:inline">Quick actions</span>
+                <span className="text-sm font-medium text-gray-700 dark:text-gray-300 hidden sm:inline">Quick actions</span>
                 <div className="flex items-center gap-1">
                   <kbd className="px-1.5 py-0.5 text-xs font-semibold text-gray-500 bg-white border border-gray-300 rounded">
                     <Icons.Command className="inline w-3 h-3" />
@@ -227,7 +218,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({
       <CommandPalette
         commands={commands}
         isOpen={isCommandPaletteOpen}
-        onClose={() => setIsCommandPaletteOpen(false)}
+        onClose={handleCloseCommandPalette}
       />
     </div>
   );
@@ -241,8 +232,8 @@ const getPageTitle = (route: string): string => {
   }
   
   const titles: Record<string, string> = {
-    '/': 'Dashboard',
-    '/focus': 'Focus Area',
+    '/': 'Focus Queue',
+    '/focus': 'Focus Queue',
     '/daily': 'Daily Tasks',
     '/journal': 'Dream Journal',
     '/analytics': 'Analytics',
@@ -259,8 +250,8 @@ const getPageDescription = (route: string): string => {
   }
   
   const descriptions: Record<string, string> = {
-    '/': 'Your productivity overview at a glance',
-    '/focus': 'Manage your focus cards and deep work',
+    '/': 'One card at a time, progress over completion',
+    '/focus': 'One card at a time, progress over completion',
     '/daily': 'Quick tasks organized by time',
     '/journal': 'Transform your morning thoughts into actionable tasks',
     '/analytics': 'Track your progress and productivity',

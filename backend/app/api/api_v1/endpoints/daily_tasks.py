@@ -20,6 +20,21 @@ if settings.DEV_MODE:
 router = APIRouter()
 
 
+@router.get("/", response_model=List[DailyTask])
+async def read_all_daily_tasks(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    if settings.DEV_MODE:
+        from app.api.mock_data import mock_daily_tasks
+        from app.schemas.daily_task import DailyTask as DailyTaskSchema
+        return [DailyTaskSchema(**task) for task in mock_daily_tasks]
+    
+    # In production, would query all tasks for current user
+    return []
+
+
 @router.get("/card/{card_id}", response_model=List[DailyTask])
 async def read_daily_tasks_by_card(
     *,
@@ -76,6 +91,13 @@ async def update_daily_task(
     task_in: DailyTaskUpdate,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
+    if settings.DEV_MODE:
+        from app.api.mock_data import update_mock_daily_task
+        task = update_mock_daily_task(task_id, task_in.dict(exclude_unset=True))
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return task
+    
     task = await daily_task_crud.get(db, id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
@@ -95,6 +117,13 @@ async def delete_daily_task(
     task_id: UUID,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
+    if settings.DEV_MODE:
+        from app.api.mock_data import delete_mock_daily_task
+        task = delete_mock_daily_task(task_id)
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return task
+    
     task = await daily_task_crud.get(db, id=task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")

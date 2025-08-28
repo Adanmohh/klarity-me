@@ -14,8 +14,12 @@ mock_cards: List[dict] = [
         "title": "Project Alpha",
         "description": "Main development project",
         "position": 0,
-        "status": CardStatus.ACTIVE,
+        "status": CardStatus.QUEUED,
         "pause_until": None,
+        "last_worked_on": None,
+        "sessions_count": 0,
+        "where_left_off": None,
+        "momentum_score": 0,
         "created_at": datetime.now(),
         "updated_at": datetime.now()
     },
@@ -25,8 +29,12 @@ mock_cards: List[dict] = [
         "title": "Research Task",
         "description": "Technology research and evaluation",
         "position": 1,
-        "status": CardStatus.ACTIVE,
+        "status": CardStatus.QUEUED,
         "pause_until": None,
+        "last_worked_on": None,
+        "sessions_count": 0,
+        "where_left_off": None,
+        "momentum_score": 0,
         "created_at": datetime.now(),
         "updated_at": datetime.now()
     },
@@ -36,14 +44,19 @@ mock_cards: List[dict] = [
         "title": "Learning Goals",
         "description": "Personal learning objectives",
         "position": 2,
-        "status": CardStatus.PAUSED,
+        "status": CardStatus.ON_HOLD,
         "pause_until": datetime.now() + timedelta(days=2),
+        "last_worked_on": None,
+        "sessions_count": 0,
+        "where_left_off": None,
+        "momentum_score": 0,
         "created_at": datetime.now(),
         "updated_at": datetime.now()
     }
 ]
 
 mock_focus_tasks: List[dict] = []
+
 mock_daily_tasks: List[dict] = []
 
 def get_mock_cards(user_id: UUID) -> List[Card]:
@@ -81,8 +94,12 @@ def create_mock_card(card_data: dict, user_id: UUID) -> Card:
         "title": card_data.get("title", "New Card"),
         "description": card_data.get("description", ""),
         "position": card_data.get("position", len(mock_cards)),
-        "status": CardStatus.ACTIVE,
+        "status": CardStatus.QUEUED,
         "pause_until": None,
+        "last_worked_on": None,
+        "sessions_count": 0,
+        "where_left_off": None,
+        "momentum_score": 0,
         "created_at": datetime.now(),
         "updated_at": datetime.now()
     }
@@ -91,6 +108,17 @@ def create_mock_card(card_data: dict, user_id: UUID) -> Card:
 
 def update_mock_card(card_id: UUID, card_data: dict, user_id: UUID) -> Optional[Card]:
     """Update an existing card"""
+    # SAFETY: If setting a card to active, ensure no other cards are active
+    if card_data.get("status") == CardStatus.ACTIVE or card_data.get("status") == "active":
+        # First deactivate all other active cards for this user
+        for card in mock_cards:
+            if (card["user_id"] == user_id and 
+                card["id"] != card_id and 
+                card["status"] == CardStatus.ACTIVE):
+                card["status"] = CardStatus.QUEUED
+                card["updated_at"] = datetime.now()
+    
+    # Now update the requested card
     for i, card in enumerate(mock_cards):
         if card["id"] == card_id and card["user_id"] == user_id:
             for key, value in card_data.items():
@@ -162,16 +190,41 @@ def get_mock_daily_tasks(card_id: UUID) -> List[DailyTask]:
 
 def create_mock_daily_task(task_data: dict) -> DailyTask:
     """Create a new daily task"""
+    from app.models.daily_task import TaskStatus
+    
     new_task = {
         "id": uuid4(),
         "card_id": task_data.get("card_id"),
         "title": task_data.get("title", "New Task"),
         "description": task_data.get("description", ""),
+        "status": TaskStatus.PENDING,
         "time_category": task_data.get("time_category", "10min"),
         "lane": task_data.get("lane", "controller"),
+        "position": task_data.get("position", 0),
         "completed": task_data.get("completed", False),
         "created_at": datetime.now(),
         "updated_at": datetime.now()
     }
     mock_daily_tasks.append(new_task)
     return DailyTask(**new_task)
+
+def update_mock_daily_task(task_id: UUID, updates: dict) -> Optional[DailyTask]:
+    """Update an existing daily task"""
+    for i, task in enumerate(mock_daily_tasks):
+        if task.get("id") == task_id:
+            for key, value in updates.items():
+                if value is not None:
+                    task[key] = value
+            task["updated_at"] = datetime.now()
+            mock_daily_tasks[i] = task
+            return DailyTask(**task)
+    return None
+
+def delete_mock_daily_task(task_id: UUID) -> Optional[DailyTask]:
+    """Delete a daily task"""
+    global mock_daily_tasks
+    for i, task in enumerate(mock_daily_tasks):
+        if task.get("id") == task_id:
+            deleted_task = mock_daily_tasks.pop(i)
+            return DailyTask(**deleted_task)
+    return None

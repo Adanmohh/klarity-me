@@ -1,7 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { MainLayout } from './components/layout/MainLayout';
 import { Dashboard } from './pages/Dashboard';
+import { Archive } from './pages/Archive';
+import { DeepWorkDashboard } from './pages/DeepWorkDashboard';
+import { FocusPage } from './pages/FocusPage';
 import { CardCarousel } from './components/cards/CardCarousel';
 import { DailyTasksView } from './components/daily/DailyTasksView';
 import { DreamJournalView } from './components/journal/DreamJournalView';
@@ -12,6 +16,8 @@ import { useDailyTaskStore } from './store/dailyTaskStore';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { Diagnostics } from './components/Diagnostics';
 import { Plus, Zap } from 'lucide-react';
+import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
+import { GlobalSearch } from './components/search/GlobalSearch';
 import './index.css';
 
 function AppContent() {
@@ -19,6 +25,8 @@ function AppContent() {
   const location = useLocation();
   const [selectedCard, setSelectedCard] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [loading, setLoading] = useState(true);
 
   const { cards, fetchCards, createCard } = useCardStore();
@@ -57,6 +65,27 @@ function AppContent() {
     // Navigate to daily tasks and open create modal
     navigate('/daily');
   };
+  
+  // Set up keyboard shortcuts
+  useKeyboardShortcuts({
+    onCreateCard: () => setIsCreateModalOpen(true),
+    onCreateTask: handleCreateTask,
+    onOpenCommandPalette: () => setIsCommandPaletteOpen(true),
+  });
+  
+  // Global search shortcut
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+/ or Cmd+/ for search
+      if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+        e.preventDefault();
+        setIsSearchOpen(true);
+      }
+    };
+    
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   if (loading) {
     return (
@@ -93,42 +122,7 @@ function AppContent() {
     );
   };
 
-  // Page components for routing
-  const FocusPage = () => {
-    // If there are no cards, show empty state
-    if (!cards || cards.length === 0) {
-      return (
-        <div className="p-8">
-          <div className="max-w-4xl mx-auto">
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-12 text-center">
-              <div className="w-20 h-20 bg-gray-100 rounded-lg flex items-center justify-center mx-auto mb-4">
-                <Zap className="w-10 h-10 text-gray-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">No Focus Cards Yet</h3>
-              <p className="text-gray-500 mb-6">Create your first focus card to start organizing your tasks</p>
-              <button
-                onClick={() => setIsCreateModalOpen(true)}
-                className="bg-primary-500 text-white px-4 py-2 rounded-lg hover:bg-primary-600 transition-colors inline-flex items-center gap-2"
-              >
-                <Plus className="w-5 h-5" />
-                Create Focus Card
-              </button>
-            </div>
-          </div>
-        </div>
-      );
-    }
-    
-    // Show card carousel for now
-    return (
-      <div className="p-8">
-        <CardCarousel
-          cards={cards}
-          onCardClick={handleCardClick}
-        />
-      </div>
-    );
-  };
+  // Using FocusPage from ./pages/FocusPage - removed local definition
 
   const AnalyticsPage = () => (
     <div className="p-8 text-center">
@@ -137,12 +131,6 @@ function AppContent() {
     </div>
   );
 
-  const ArchivePage = () => (
-    <div className="p-8 text-center">
-      <h2 className="text-3xl font-bold text-primary-black mb-4">Archive</h2>
-      <p className="text-gray-500">Coming soon...</p>
-    </div>
-  );
 
   const SettingsPage = () => (
     <div className="p-8 text-center">
@@ -158,9 +146,13 @@ function AppContent() {
         onNavigate={handleNavigate}
         onCreateCard={() => setIsCreateModalOpen(true)}
         onCreateTask={handleCreateTask}
+        isCommandPaletteOpen={isCommandPaletteOpen}
+        onCloseCommandPalette={() => setIsCommandPaletteOpen(false)}
       >
         <Routes>
-          <Route path="/" element={
+          <Route path="/" element={<FocusPage />} />
+          <Route path="/deep-work-old" element={<DeepWorkDashboard />} />
+          <Route path="/dashboard-old" element={
             <Dashboard
               cards={cards}
               dailyTasksCount={tasks.length}
@@ -173,7 +165,7 @@ function AppContent() {
           <Route path="/daily" element={<DailyTasksView />} />
           <Route path="/journal" element={<DreamJournalView />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/archive" element={<ArchivePage />} />
+          <Route path="/archive" element={<Archive />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/diagnostics" element={<Diagnostics />} />
         </Routes>
@@ -184,15 +176,22 @@ function AppContent() {
         onClose={() => setIsCreateModalOpen(false)}
         onSubmit={handleCreateCard}
       />
+      
+      <GlobalSearch
+        isOpen={isSearchOpen}
+        onClose={() => setIsSearchOpen(false)}
+      />
     </>
   );
 }
 
 function App() {
   return (
-    <Router>
-      <AppContent />
-    </Router>
+    <ThemeProvider>
+      <Router>
+        <AppContent />
+      </Router>
+    </ThemeProvider>
   );
 }
 

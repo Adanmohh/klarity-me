@@ -108,10 +108,10 @@ export const Dashboard: React.FC<DashboardProps> = ({
         animate={{ opacity: 1, y: 0 }}
         className="mb-6 md:mb-8"
       >
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 mb-2">
+        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2">
           Welcome back
         </h1>
-        <p className="text-base md:text-lg lg:text-xl text-gray-600">
+        <p className="text-base md:text-lg lg:text-xl text-gray-600 dark:text-gray-400">
           {new Date().toLocaleDateString('en-US', { 
             weekday: 'long', 
             year: 'numeric', 

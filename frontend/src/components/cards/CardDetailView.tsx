@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 import { Card, CardWithTasks } from '../../types';
 import { FocusArea } from '../workspace/FocusArea';
 import { ArrowLeft } from 'lucide-react';
-import { focusTasksAPI } from '../../services/api';
+import { cardsAPI, focusTasksAPI } from '../../services/api';
 
 interface CardDetailViewProps {
   card: Card;
@@ -15,17 +15,14 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onBack }) 
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Fetch tasks for this card
-    const loadTasks = async () => {
+    // Fetch card with tasks
+    const loadCardWithTasks = async () => {
       try {
-        const tasks = await focusTasksAPI.getTasksByCard(card.id);
-        setCardWithTasks({
-          ...card,
-          focus_tasks: tasks,
-          daily_tasks: []
-        });
+        // Use cardsAPI.getCard which returns the card with tasks included
+        const cardData = await cardsAPI.getCard(card.id);
+        setCardWithTasks(cardData);
       } catch (error) {
-        console.error('Failed to load tasks:', error);
+        console.error('Failed to load card with tasks:', error);
         // Even on error, set the card with empty tasks
         setCardWithTasks({
           ...card,
@@ -36,7 +33,7 @@ export const CardDetailView: React.FC<CardDetailViewProps> = ({ card, onBack }) 
         setLoading(false);
       }
     };
-    loadTasks();
+    loadCardWithTasks();
   }, [card]);
 
   if (loading) {

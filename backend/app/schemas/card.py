@@ -21,12 +21,20 @@ class CardUpdate(BaseModel):
     position: Optional[int] = None
     status: Optional[CardStatus] = None
     pause_until: Optional[datetime] = None
+    last_worked_on: Optional[datetime] = None
+    sessions_count: Optional[int] = None
+    where_left_off: Optional[str] = None
+    momentum_score: Optional[int] = None
 
 
 class CardInDBBase(CardBase):
     id: UUID
     status: CardStatus
     pause_until: Optional[datetime]
+    last_worked_on: Optional[datetime]
+    sessions_count: int
+    where_left_off: Optional[str]
+    momentum_score: int
     user_id: UUID
     created_at: datetime
     updated_at: Optional[datetime]

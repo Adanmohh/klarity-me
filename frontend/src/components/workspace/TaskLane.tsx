@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useDragAndDrop } from '../../hooks/useDragAndDrop';
 import { FocusTask, DailyTask, TaskStatus, DailyTaskStatus, TaskDuration } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
@@ -34,6 +35,15 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
 }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
+  const [localTasks, setLocalTasks] = useState(tasks);
+  
+  // Drag and drop functionality
+  const { getDragHandleProps } = useDragAndDrop(localTasks, {
+    onReorder: (reorderedTasks) => {
+      setLocalTasks(reorderedTasks);
+      // You could also call an API here to persist the new order
+    }
+  });
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,10 +69,10 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
   return (
     <GlassCard className="task-lane">
       <div className="mb-4">
-        <h3 className="text-lg font-semibold text-primary-black mb-1">
+        <h3 className="text-lg font-semibold text-primary-black dark:text-white mb-1">
           {title}
         </h3>
-        <p className="text-sm text-gray-600">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           {subtitle}
         </p>
       </div>
@@ -77,6 +87,8 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: -10 }}
               transition={{ delay: index * 0.1 }}
+              {...getDragHandleProps(index)}
+              className="cursor-move hover:scale-[1.02] transition-transform"
             >
               <TaskCard
                 task={task}
@@ -99,7 +111,7 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
             <Button
               variant="ghost"
               onClick={() => setShowAddForm(true)}
-              className="w-full text-gray-600 hover:text-primary-black"
+              className="w-full text-gray-600 dark:text-gray-400 hover:text-primary-black dark:hover:text-white"
             >
               + Add Task
             </Button>
@@ -110,7 +122,7 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
                 value={newTaskTitle}
                 onChange={(e) => setNewTaskTitle(e.target.value)}
                 placeholder="Enter task title..."
-                className="w-full px-3 py-2 rounded glass-effect border border-white/20 text-sm"
+                className="w-full px-3 py-2 rounded glass-effect border border-white/20 dark:border-neutral-700 text-sm bg-white/50 dark:bg-neutral-800/50 text-gray-900 dark:text-white"
                 autoFocus
               />
               <div className="flex space-x-2">
@@ -141,7 +153,7 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
       {/* Completed Tasks */}
       {completedTasks.length > 0 && (
         <div className="border-t border-white/20 mt-4 pt-4">
-          <h4 className="text-sm font-medium text-gray-600 mb-2">
+          <h4 className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
             Completed ({completedTasks.length})
           </h4>
           <div className="space-y-2">

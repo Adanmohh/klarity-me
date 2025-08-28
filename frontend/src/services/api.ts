@@ -69,6 +69,11 @@ export const cardsAPI = {
 };
 
 export const focusTasksAPI = {
+  getAllTasks: async (): Promise<FocusTask[]> => {
+    const response = await api.get('/focus-tasks/');
+    return response.data;
+  },
+  
   getTasksByCard: async (cardId: string): Promise<FocusTask[]> => {
     const response = await api.get(`/focus-tasks/card/${cardId}`);
     return response.data;
@@ -90,6 +95,11 @@ export const focusTasksAPI = {
 };
 
 export const dailyTasksAPI = {
+  getAllTasks: async (): Promise<DailyTask[]> => {
+    const response = await api.get('/daily-tasks/');
+    return response.data;
+  },
+  
   getTasksByCard: async (cardId: string): Promise<DailyTask[]> => {
     const response = await api.get(`/daily-tasks/card/${cardId}`);
     return response.data;

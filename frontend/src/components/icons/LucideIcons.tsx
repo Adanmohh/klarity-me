@@ -41,6 +41,9 @@ import {
   Info,
   CheckCircle,
   XCircle,
+  Play,
+  Pause,
+  List,
   type LucideProps
 } from 'lucide-react';
 
@@ -62,6 +65,8 @@ export const Icons = {
   Close: (props: LucideProps) => <X size={20} {...props} />,
   Check: (props: LucideProps) => <Check size={20} {...props} />,
   Refresh: (props: LucideProps) => <RefreshCw size={18} {...props} />,
+  RefreshCw: (props: LucideProps) => <RefreshCw size={18} {...props} />,
+  Trash2: (props: LucideProps) => <Trash2 size={16} {...props} />,
   Move: (props: LucideProps) => <ArrowLeftRight size={18} {...props} />,
   Search: (props: LucideProps) => <Search size={20} {...props} />,
   Command: (props: LucideProps) => <Command size={16} {...props} />,
@@ -93,6 +98,13 @@ export const Icons = {
   Star: (props: LucideProps) => <Star size={18} {...props} />,
   Heart: (props: LucideProps) => <Heart size={18} {...props} />,
   TrendingUp: (props: LucideProps) => <TrendingUp size={18} {...props} />,
+  
+  // Media Controls
+  Play: (props: LucideProps) => <Play size={20} {...props} />,
+  Pause: (props: LucideProps) => <Pause size={20} {...props} />,
+  
+  // Lists
+  Queue: (props: LucideProps) => <List size={20} {...props} />,
   
   // Alerts
   AlertCircle: (props: LucideProps) => <AlertCircle size={18} {...props} />,

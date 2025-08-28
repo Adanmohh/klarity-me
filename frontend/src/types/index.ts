@@ -9,6 +9,8 @@ export interface User {
 
 export enum CardStatus {
   ACTIVE = 'active',
+  QUEUED = 'queued',
+  ON_HOLD = 'on-hold',
   PAUSED = 'paused',
   COMPLETED = 'completed'
 }
@@ -18,8 +20,12 @@ export interface Card {
   title: string;
   description?: string;
   position: number;
-  status: CardStatus;
+  status: CardStatus | string; // Allow string for now to handle backend responses
   pause_until?: string;
+  last_worked_on?: string;
+  sessions_count: number;
+  where_left_off?: string;
+  momentum_score: number;
   user_id: string;
   created_at: string;
   updated_at?: string;
@@ -59,7 +65,8 @@ export enum TaskDuration {
 
 export enum DailyTaskStatus {
   PENDING = 'pending',
-  COMPLETED = 'completed'
+  COMPLETED = 'completed',
+  ARCHIVED = 'archived'
 }
 
 export interface DailyTask {

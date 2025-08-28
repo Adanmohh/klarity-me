@@ -18,19 +18,18 @@ async def get_current_user(
     db: AsyncSession = Depends(get_db),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
 ) -> User:
-    # DEV MODE: Return a mock user if no credentials provided
-    if not credentials and settings.DEV_MODE:
-        # Return a mock user object without database
-        import uuid
-        from datetime import datetime
-        mock_user = User()
-        mock_user.id = uuid.UUID('12345678-1234-5678-1234-567812345678')
-        mock_user.email = "dev@example.com"
-        mock_user.full_name = "Dev User"
-        mock_user.is_active = True
-        mock_user.created_at = datetime.now()
-        mock_user.hashed_password = "mock_password"
-        return mock_user
+    # For now, always return a mock user (no auth required)
+    # This allows us to test with Supabase without auth setup
+    import uuid
+    from datetime import datetime
+    mock_user = User()
+    mock_user.id = uuid.UUID('12345678-1234-5678-1234-567812345678')
+    mock_user.email = "dev@example.com"
+    mock_user.full_name = "Dev User"
+    mock_user.is_active = True
+    mock_user.created_at = datetime.now()
+    mock_user.hashed_password = "mock_password"
+    return mock_user
     
     if not credentials:
         raise HTTPException(

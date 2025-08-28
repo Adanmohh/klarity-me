@@ -22,6 +22,7 @@ class TaskDuration(str, enum.Enum):
 class TaskStatus(str, enum.Enum):
     PENDING = "pending"
     COMPLETED = "completed"
+    ARCHIVED = "archived"
 
 
 class DailyTask(Base):

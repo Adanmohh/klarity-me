@@ -82,7 +82,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             type="text"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            className="w-full px-2 py-1 rounded glass-effect border border-white/20 text-sm"
+            className="w-full px-2 py-1 rounded glass-effect border border-white/20 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/50 text-gray-900 dark:text-white text-sm"
             placeholder="Task title"
           />
           
@@ -91,7 +91,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
               <textarea
                 value={editDescription}
                 onChange={(e) => setEditDescription(e.target.value)}
-                className="w-full px-2 py-1 rounded glass-effect border border-white/20 text-sm resize-none"
+                className="w-full px-2 py-1 rounded glass-effect border border-white/20 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/50 text-gray-900 dark:text-white text-sm resize-none"
                 rows={2}
                 placeholder="Description (optional)"
               />
@@ -100,7 +100,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 type="text"
                 value={editTags}
                 onChange={(e) => setEditTags(e.target.value)}
-                className="w-full px-2 py-1 rounded glass-effect border border-white/20 text-sm"
+                className="w-full px-2 py-1 rounded glass-effect border border-white/20 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/50 text-gray-900 dark:text-white text-sm"
                 placeholder="Tags (comma separated)"
               />
               
@@ -108,7 +108,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
                 type="date"
                 value={editDate}
                 onChange={(e) => setEditDate(e.target.value)}
-                className="w-full px-2 py-1 rounded glass-effect border border-white/20 text-sm"
+                className="w-full px-2 py-1 rounded glass-effect border border-white/20 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/50 text-gray-900 dark:text-white text-sm"
               />
             </>
           )}
@@ -117,7 +117,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
             <select
               value={editDuration}
               onChange={(e) => setEditDuration(e.target.value as TaskDuration)}
-              className="w-full px-2 py-1 rounded glass-effect border border-white/20 text-sm"
+              className="w-full px-2 py-1 rounded glass-effect border border-white/20 dark:border-neutral-700 bg-white/50 dark:bg-neutral-800/50 text-gray-900 dark:text-white text-sm"
             >
               <option value={TaskDuration.TEN_MIN}>10 minutes</option>
               <option value={TaskDuration.FIFTEEN_MIN}>15 minutes</option>
@@ -151,13 +151,13 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       >
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
-          <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500' : 'text-primary-black'}`}>
+          <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : 'text-primary-black dark:text-white'}`}>
             {task.title}
           </h4>
           <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
             <button
               onClick={() => setIsEditing(true)}
-              className="text-xs text-gray-500 hover:text-primary-black"
+              className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-black dark:hover:text-white"
             >
               Edit
             </button>
@@ -172,7 +172,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
         </div>
 
         {taskType === 'focus' && (task as FocusTask).description && (
-          <p className="text-sm text-gray-600 mb-2">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
             {(task as FocusTask).description}
           </p>
         )}

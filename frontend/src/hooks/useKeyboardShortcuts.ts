@@ -1,18 +1,18 @@
-import { useEffect } from 'react';
-import { useAppStore } from '../store/appStore';
-import { useAuthStore } from '../store/authStore';
+import { useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../contexts/ThemeContext';
 
-export const useKeyboardShortcuts = () => {
-  const { 
-    currentArea, 
-    setCurrentArea, 
-    toggleArrangeMode,
-    cards,
-    setCurrentCard
-  } = useAppStore();
+interface KeyboardShortcutsOptions {
+  onCreateCard?: () => void;
+  onCreateTask?: () => void;
+  onOpenCommandPalette?: () => void;
+}
 
-  useEffect(() => {
-    const handleKeyPress = async (e: KeyboardEvent) => {
+export const useKeyboardShortcuts = (options: KeyboardShortcutsOptions = {}) => {
+  const navigate = useNavigate();
+  const { toggleTheme } = useTheme();
+
+  const handleKeyPress = useCallback((e: KeyboardEvent) => {
       // Ignore if typing in input/textarea
       if (e.target instanceof HTMLInputElement || 
           e.target instanceof HTMLTextAreaElement) {
@@ -21,88 +21,74 @@ export const useKeyboardShortcuts = () => {
 
       // Command/Ctrl combinations
       if (e.metaKey || e.ctrlKey) {
-        switch(e.key) {
-          case 'k':
+        // Navigation shortcuts with Shift
+        if (e.shiftKey) {
+          switch(e.key.toLowerCase()) {
+            case 'd':
+              e.preventDefault();
+              navigate('/');
+              break;
+            case 'f':
+              e.preventDefault();
+              navigate('/focus');
+              break;
+            case 't':
+              e.preventDefault();
+              navigate('/daily');
+              break;
+            case 'j':
+              e.preventDefault();
+              navigate('/journal');
+              break;
+            case 'a':
+              e.preventDefault();
+              navigate('/analytics');
+              break;
+          }
+          return;
+        }
+        
+        // Theme toggle
+        if (e.altKey && e.key.toLowerCase() === 't') {
+          e.preventDefault();
+          toggleTheme();
+          return;
+        }
+        
+        // Command palette
+        if (e.key === 'k') {
+          e.preventDefault();
+          options.onOpenCommandPalette?.();
+          return;
+        }
+      }
+      
+      // Alt combinations for quick actions
+      if (e.altKey && !e.ctrlKey && !e.metaKey) {
+        switch(e.key.toLowerCase()) {
+          case 'c':
             e.preventDefault();
-            // Open command palette (to be implemented)
-            console.log('Command palette');
+            options.onCreateCard?.();
             break;
           case 'n':
             e.preventDefault();
-            // New card/task
-            document.querySelector<HTMLButtonElement>('[data-new-card]')?.click();
-            break;
-          case 's':
-            e.preventDefault();
-            // Save/sync
-            console.log('Saving...');
-            break;
-          case 'e':
-            e.preventDefault();
-            // Export data
-            const { storage } = await import('../utils/storage');
-            storage.exportData();
+            options.onCreateTask?.();
             break;
         }
         return;
       }
 
-      // Single key shortcuts
-      switch(e.key) {
-        case 'f':
-          // Switch to Focus mode
-          setCurrentArea('focus');
-          break;
-        case 'd':
-          // Switch to Daily tasks
-          setCurrentArea('daily');
-          break;
-        case 'a':
-          // Toggle arrange mode
-          if (currentArea === 'focus') {
-            toggleArrangeMode();
-          }
-          break;
-        case ' ':
-          // Space - flip top card
-          e.preventDefault();
-          if (currentArea === 'focus' && !useAppStore.getState().currentCard) {
-            const topCard = cards[0];
-            if (topCard) {
-              // Trigger flip animation
-              document.querySelector<HTMLDivElement>('[data-top-card]')?.click();
-            }
-          }
-          break;
-        case 'Escape':
-          // Close current card
-          setCurrentCard(null);
-          break;
-        case '?':
-          // Show help
-          showShortcutsHelp();
-          break;
+      // Help shortcut
+      if (e.key === '?' && e.shiftKey) {
+        e.preventDefault();
+        showShortcutsHelp();
       }
+    }, [navigate, toggleTheme, options]);
 
-      // Number keys - jump to card
-      if (e.key >= '1' && e.key <= '9') {
-        const cardIndex = parseInt(e.key) - 1;
-        if (cards[cardIndex] && currentArea === 'focus') {
-          // Fetch full card data and open
-          const { cardsAPI } = await import('../services/api');
-          try {
-            const cardWithTasks = await cardsAPI.getCard(cards[cardIndex].id);
-            setCurrentCard(cardWithTasks);
-          } catch (error) {
-            console.error('Failed to load card:', error);
-          }
-        }
-      }
-    };
-
+  useEffect(() => {
     window.addEventListener('keydown', handleKeyPress);
     return () => window.removeEventListener('keydown', handleKeyPress);
-  }, [currentArea, cards, setCurrentArea, toggleArrangeMode, setCurrentCard]);
+  }, [handleKeyPress]);
 };
 
 function showShortcutsHelp() {
@@ -110,20 +96,37 @@ function showShortcutsHelp() {
     ⌨️ Keyboard Shortcuts:
     
     Navigation:
-    • f - Focus mode
-    • d - Daily tasks
-    • 1-9 - Jump to card
-    • ESC - Close card
+    • Ctrl+Shift+D - Dashboard
+    • Ctrl+Shift+F - Focus Area
+    • Ctrl+Shift+T - Daily Tasks
+    • Ctrl+Shift+J - Dream Journal
+    • Ctrl+Shift+A - Analytics
     
-    Actions:
-    • Space - Flip top card
-    • a - Arrange mode
-    • Cmd+N - New card/task
-    • Cmd+K - Command palette
-    • Cmd+E - Export data
-    • Cmd+S - Save
+    Quick Actions:
+    • Alt+C - Create Card
+    • Alt+N - Create Task
+    • Ctrl+K - Command Palette
+    • Ctrl+Alt+T - Toggle Theme
     
-    • ? - Show this help
+    • Shift+? - Show this help
   `;
   alert(shortcuts);
 }
+
+// Export shortcut definitions for display in UI
+export const shortcuts = {
+  navigation: [
+    { key: 'Ctrl+Shift+D', description: 'Go to Dashboard' },
+    { key: 'Ctrl+Shift+F', description: 'Go to Focus Area' },
+    { key: 'Ctrl+Shift+T', description: 'Go to Daily Tasks' },
+    { key: 'Ctrl+Shift+J', description: 'Go to Dream Journal' },
+    { key: 'Ctrl+Shift+A', description: 'Go to Analytics' },
+  ],
+  actions: [
+    { key: 'Alt+C', description: 'Create New Card' },
+    { key: 'Alt+N', description: 'Create New Task' },
+    { key: 'Ctrl+K', description: 'Open Command Palette' },
+    { key: 'Ctrl+Alt+T', description: 'Toggle Dark/Light Theme' },
+    { key: 'Shift+?', description: 'Show Keyboard Shortcuts' },
+  ],
+};
