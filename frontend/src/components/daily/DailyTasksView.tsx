@@ -1,42 +1,29 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { TaskLane, TaskDuration, DailyTaskStatus, type DailyTask } from '../../types';
-import { TaskLane as TaskLaneComponent } from '../workspace/TaskLane';
+import { motion, AnimatePresence } from 'framer-motion';
+import { TaskDuration, DailyTaskStatus, type DailyTask } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
 import { Icons } from '../icons/LucideIcons';
-import { ConfirmDialog } from '../ui/ConfirmDialog';
-import { dailyTasksAPI, cardsAPI } from '../../services/api';
-import { useCardStore } from '../../store/cardStore';
+import { dailyTasksAPI } from '../../services/api';
 import { cn } from '../../utils/cn';
 
 export const DailyTasksView: React.FC = () => {
   const [tasks, setTasks] = useState<DailyTask[]>([]);
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [selectedDuration, setSelectedDuration] = useState<TaskDuration>(TaskDuration.TEN_MIN);
-  const [showArchived, setShowArchived] = useState(false);
+  const [newTaskDescription, setNewTaskDescription] = useState('');
+  const [selectedDuration, setSelectedDuration] = useState<TaskDuration>(TaskDuration.FIFTEEN_MIN);
+  const [showCompleted, setShowCompleted] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [selectedCard, setSelectedCard] = useState<string | null>(null);
-  const { cards } = useCardStore();
-  const [deleteConfirm, setDeleteConfirm] = useState<{ isOpen: boolean; taskId: string | null }>({
-    isOpen: false,
-    taskId: null,
-  });
+  const [showAddForm, setShowAddForm] = useState(false);
 
   useEffect(() => {
     loadTasks();
-  }, [selectedCard]);
+  }, []);
 
   const loadTasks = async () => {
-    if (!selectedCard) {
-      setTasks([]);
-      setLoading(false);
-      return;
-    }
-    
     setLoading(true);
     try {
-      const fetchedTasks = await dailyTasksAPI.getTasksByCard(selectedCard);
+      const fetchedTasks = await dailyTasksAPI.getAllTasks();
       setTasks(fetchedTasks);
     } catch (error) {
       console.error('Failed to load daily tasks:', error);
@@ -45,53 +32,37 @@ export const DailyTasksView: React.FC = () => {
     }
   };
 
-  // Filter tasks based on archive status
-  const visibleTasks = tasks.filter(task => 
-    showArchived ? task.status === DailyTaskStatus.ARCHIVED : task.status !== DailyTaskStatus.ARCHIVED
-  );
+  // Filter tasks based on completion status
+  const pendingTasks = tasks.filter(task => task.status === DailyTaskStatus.PENDING);
+  const completedTasks = tasks.filter(task => task.status === DailyTaskStatus.COMPLETED);
 
-  // Separate tasks by lane
-  const controllerTasks = visibleTasks.filter(task => task.lane === TaskLane.CONTROLLER);
-  const mainTasks = visibleTasks.filter(task => task.lane === TaskLane.MAIN);
-
-  // Group main tasks by duration
+  // Group tasks by duration for better organization
   const tasksByDuration = {
-    [TaskDuration.TEN_MIN]: mainTasks.filter(task => task.duration === TaskDuration.TEN_MIN),
-    [TaskDuration.FIFTEEN_MIN]: mainTasks.filter(task => task.duration === TaskDuration.FIFTEEN_MIN),
-    [TaskDuration.THIRTY_MIN]: mainTasks.filter(task => task.duration === TaskDuration.THIRTY_MIN),
+    [TaskDuration.TEN_MIN]: pendingTasks.filter(task => task.duration === TaskDuration.TEN_MIN),
+    [TaskDuration.FIFTEEN_MIN]: pendingTasks.filter(task => task.duration === TaskDuration.FIFTEEN_MIN),
+    [TaskDuration.THIRTY_MIN]: pendingTasks.filter(task => task.duration === TaskDuration.THIRTY_MIN),
+    'No Duration': pendingTasks.filter(task => !task.duration),
   };
 
-  const handleCreateTask = async (lane: TaskLane) => {
-    if (!newTaskTitle.trim() || !selectedCard) return;
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTaskTitle.trim()) return;
 
     try {
       const newTask = await dailyTasksAPI.createTask({
-        card_id: selectedCard,
-        title: newTaskTitle,
-        lane,
-        duration: lane === TaskLane.MAIN ? selectedDuration : undefined,
+        title: newTaskTitle.trim(),
+        description: newTaskDescription.trim() || undefined,
+        duration: selectedDuration,
         status: DailyTaskStatus.PENDING,
+        position: tasks.length,
       });
       
       setTasks([...tasks, newTask]);
       setNewTaskTitle('');
+      setNewTaskDescription('');
+      setShowAddForm(false);
     } catch (error) {
       console.error('Failed to create task:', error);
-    }
-  };
-
-  const handleMoveTask = async (taskId: string, toLane: TaskLane, duration?: TaskDuration) => {
-    try {
-      const updatedTask = await dailyTasksAPI.updateTask(taskId, {
-        lane: toLane,
-        duration: toLane === TaskLane.MAIN ? duration : undefined,
-      });
-      
-      setTasks(tasks.map(task => 
-        task.id === taskId ? updatedTask : task
-      ));
-    } catch (error) {
-      console.error('Failed to move task:', error);
     }
   };
 
@@ -100,124 +71,138 @@ export const DailyTasksView: React.FC = () => {
     if (!task) return;
 
     try {
-      const newStatus = task.status === DailyTaskStatus.COMPLETED ? DailyTaskStatus.PENDING : DailyTaskStatus.COMPLETED;
-      const updatedTask = await dailyTasksAPI.updateTask(taskId, { status: newStatus });
+      let updatedTask;
+      if (task.status === DailyTaskStatus.COMPLETED) {
+        updatedTask = await dailyTasksAPI.reopenTask(taskId);
+      } else {
+        updatedTask = await dailyTasksAPI.completeTask(taskId);
+      }
       
-      setTasks(tasks.map(t => 
-        t.id === taskId ? updatedTask : t
-      ));
+      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
     } catch (error) {
-      console.error('Failed to toggle task:', error);
+      console.error('Failed to toggle task completion:', error);
     }
   };
 
-  const handleArchiveTask = async (taskId: string) => {
+  const handleDeleteTask = async (taskId: string) => {
     try {
-      const updatedTask = await dailyTasksAPI.updateTask(taskId, { status: DailyTaskStatus.ARCHIVED });
-      setTasks(tasks.map(task => 
-        task.id === taskId ? updatedTask : task
-      ));
-    } catch (error) {
-      console.error('Failed to archive task:', error);
-    }
-  };
-
-  const handleRestoreTask = async (taskId: string) => {
-    try {
-      const updatedTask = await dailyTasksAPI.updateTask(taskId, { status: DailyTaskStatus.PENDING });
-      setTasks(tasks.map(task => 
-        task.id === taskId ? updatedTask : task
-      ));
-    } catch (error) {
-      console.error('Failed to restore task:', error);
-    }
-  };
-
-  const handleDeleteTask = async () => {
-    if (!deleteConfirm.taskId) return;
-
-    try {
-      await dailyTasksAPI.deleteTask(deleteConfirm.taskId);
-      setTasks(tasks.filter(task => task.id !== deleteConfirm.taskId));
-      setDeleteConfirm({ isOpen: false, taskId: null });
+      await dailyTasksAPI.deleteTask(taskId);
+      setTasks(tasks.filter(t => t.id !== taskId));
     } catch (error) {
       console.error('Failed to delete task:', error);
     }
   };
 
-  const renderTask = (task: DailyTask) => {
-    const isArchived = task.status === DailyTaskStatus.ARCHIVED;
-    const isCompleted = task.status === DailyTaskStatus.COMPLETED;
+  const handleUpdateTask = async (taskId: string, updates: Partial<DailyTask>) => {
+    try {
+      const updatedTask = await dailyTasksAPI.updateTask(taskId, updates);
+      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+    } catch (error) {
+      console.error('Failed to update task:', error);
+    }
+  };
+
+  const TaskItem: React.FC<{ task: DailyTask }> = ({ task }) => {
+    const [isEditing, setIsEditing] = useState(false);
+    const [editTitle, setEditTitle] = useState(task.title);
+    const [editDescription, setEditDescription] = useState(task.description || '');
+
+    const handleSaveEdit = async () => {
+      if (editTitle.trim() && (editTitle !== task.title || editDescription !== task.description)) {
+        await handleUpdateTask(task.id, {
+          title: editTitle.trim(),
+          description: editDescription.trim() || undefined,
+        });
+      }
+      setIsEditing(false);
+    };
 
     return (
       <motion.div
-        key={task.id}
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
+        layout
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, x: -100 }}
         className={cn(
-          "p-4 rounded-lg border transition-all",
-          isArchived
-            ? "bg-neutral-100 dark:bg-neutral-800 border-neutral-300 dark:border-neutral-600 opacity-60"
-            : isCompleted
-            ? "bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-700"
-            : "bg-white dark:bg-neutral-900 border-neutral-200 dark:border-neutral-700"
+          "glass-effect rounded-lg p-3 mb-2",
+          task.status === DailyTaskStatus.COMPLETED && "opacity-60"
         )}
       >
-        <div className="flex items-start justify-between">
-          <div className="flex items-start gap-3 flex-1">
-            <button
-              onClick={() => handleToggleComplete(task.id)}
-              className={cn(
-                "mt-0.5 w-5 h-5 rounded border-2 transition-all",
-                isCompleted
-                  ? "bg-green-500 border-green-500"
-                  : "border-neutral-300 hover:border-primary-gold"
-              )}
-            >
-              {isCompleted && (
-                <Icons.Check className="w-3 h-3 text-white" />
-              )}
-            </button>
+        <div className="flex items-start gap-3">
+          <button
+            onClick={() => handleToggleComplete(task.id)}
+            className={cn(
+              "mt-1 w-5 h-5 rounded border-2 flex items-center justify-center transition-colors",
+              task.status === DailyTaskStatus.COMPLETED
+                ? "bg-green-500 border-green-500"
+                : "border-gray-300 hover:border-primary-500"
+            )}
+          >
+            {task.status === DailyTaskStatus.COMPLETED && (
+              <Icons.Check className="w-3 h-3 text-white" />
+            )}
+          </button>
+
+          {isEditing ? (
             <div className="flex-1">
-              <h4 className={cn(
+              <input
+                type="text"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                className="w-full px-2 py-1 mb-1 bg-white/50 dark:bg-gray-800/50 rounded border border-gray-300 dark:border-gray-600"
+                autoFocus
+              />
+              <textarea
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="w-full px-2 py-1 bg-white/50 dark:bg-gray-800/50 rounded border border-gray-300 dark:border-gray-600 text-sm"
+                rows={2}
+              />
+              <div className="flex gap-2 mt-2">
+                <Button size="sm" onClick={handleSaveEdit}>Save</Button>
+                <Button size="sm" variant="ghost" onClick={() => setIsEditing(false)}>Cancel</Button>
+              </div>
+            </div>
+          ) : (
+            <div className="flex-1">
+              <div className={cn(
                 "font-medium",
-                isCompleted && "line-through text-neutral-500"
+                task.status === DailyTaskStatus.COMPLETED && "line-through"
               )}>
                 {task.title}
-              </h4>
+              </div>
+              {task.description && (
+                <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                  {task.description}
+                </div>
+              )}
               {task.duration && (
-                <span className="text-xs text-neutral-500 mt-1">
-                  Duration: {task.duration}
+                <span className="inline-block mt-2 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs rounded">
+                  {task.duration}
                 </span>
               )}
             </div>
-          </div>
-          <div className="flex items-center gap-2">
-            {isArchived ? (
+          )}
+
+          <div className="flex items-center gap-1">
+            {!isEditing && (
               <>
                 <button
-                  onClick={() => handleRestoreTask(task.id)}
-                  className="p-1 rounded hover:bg-blue-100 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors"
-                  title="Restore"
+                  onClick={() => setIsEditing(true)}
+                  className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
+                  title="Edit task"
                 >
-                  <Icons.RefreshCw className="w-4 h-4" />
+                  <Icons.Edit className="w-4 h-4 text-gray-500" />
                 </button>
                 <button
-                  onClick={() => setDeleteConfirm({ isOpen: true, taskId: task.id })}
-                  className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 transition-colors"
-                  title="Delete Permanently"
+                  onClick={() => handleDeleteTask(task.id)}
+                  className="p-1 hover:bg-red-100 dark:hover:bg-red-900/30 rounded"
+                  title="Delete task"
                 >
-                  <Icons.Trash2 className="w-4 h-4" />
+                  <Icons.Trash className="w-4 h-4 text-red-500" />
                 </button>
               </>
-            ) : (
-              <button
-                onClick={() => handleArchiveTask(task.id)}
-                className="p-1 rounded hover:bg-neutral-100 dark:hover:bg-neutral-800 text-neutral-600 dark:text-neutral-400 transition-colors"
-                title="Archive"
-              >
-                <Icons.Archive className="w-4 h-4" />
-              </button>
             )}
           </div>
         </div>
@@ -225,148 +210,179 @@ export const DailyTasksView: React.FC = () => {
     );
   };
 
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="max-w-7xl mx-auto space-y-6 p-6"
-    >
-      {/* Header */}
-      <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-primary-black dark:text-white mb-2">Daily Tasks</h2>
-        <p className="text-gray-600 dark:text-gray-400">Quick tasks organized by time duration</p>
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary-500"></div>
       </div>
+    );
+  }
 
-      {/* Card Selection */}
-      {cards && cards.length > 0 && (
-        <GlassCard className="p-6 mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <label className="text-sm font-medium text-neutral-700 dark:text-neutral-300">
-                Select Card:
-              </label>
-              <select
-                value={selectedCard || ''}
-                onChange={(e) => setSelectedCard(e.target.value)}
-                className="px-4 py-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
-              >
-                <option value="">Choose a card...</option>
-                {cards.map(card => (
-                  <option key={card.id} value={card.id}>
-                    {card.title}
-                  </option>
-                ))}
-              </select>
+  return (
+    <div className="p-8">
+      <div className="max-w-4xl mx-auto">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+            Daily Tasks
+          </h1>
+          <p className="text-gray-600 dark:text-gray-400">
+            Manage your daily tasks and miscellaneous to-dos
+          </p>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-6">
+          <GlassCard className="p-4 text-center">
+            <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+              {pendingTasks.length}
             </div>
-            <button
-              onClick={() => setShowArchived(!showArchived)}
-              className={cn(
-                "px-4 py-2 rounded-lg font-medium transition-all",
-                showArchived
-                  ? "bg-primary-gold text-white"
-                  : "bg-neutral-100 dark:bg-neutral-800 text-neutral-700 dark:text-neutral-300"
-              )}
-            >
-              {showArchived ? 'Hide Archived' : 'Show Archived'}
-            </button>
-          </div>
-        </GlassCard>
-      )}
+            <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {completedTasks.length}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Completed Today</div>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
+              {tasks.length}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
+          </GlassCard>
+        </div>
 
-      {!selectedCard ? (
-        <div className="text-center py-12">
-          <Icons.Layers className="w-16 h-16 text-neutral-300 dark:text-neutral-700 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-neutral-600 dark:text-neutral-400">
-            Select a card to manage daily tasks
-          </h3>
-        </div>
-      ) : loading ? (
-        <div className="flex items-center justify-center py-12">
-          <Icons.Refresh className="w-8 h-8 animate-spin text-neutral-400" />
-        </div>
-      ) : (
-        <>
-          {/* Add Task Section */}
-          {!showArchived && (
-            <GlassCard className="p-6">
-              <div className="flex items-center space-x-4">
-                <input
-                  type="text"
-                  value={newTaskTitle}
-                  onChange={(e) => setNewTaskTitle(e.target.value)}
-                  onKeyPress={(e) => e.key === 'Enter' && handleCreateTask(TaskLane.CONTROLLER)}
-                  placeholder="Add a quick task..."
-                  className="flex-1 px-4 py-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 
-                           focus:outline-none focus:ring-2 focus:ring-primary-gold/50"
-                />
-                
-                <select
-                  value={selectedDuration}
-                  onChange={(e) => setSelectedDuration(e.target.value as TaskDuration)}
-                  className="px-4 py-2 rounded-lg bg-white dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700"
-                >
-                  <option value={TaskDuration.TEN_MIN}>10 min</option>
-                  <option value={TaskDuration.FIFTEEN_MIN}>15 min</option>
-                  <option value={TaskDuration.THIRTY_MIN}>30 min</option>
-                </select>
-                
-                <Button onClick={() => handleCreateTask(TaskLane.CONTROLLER)}>
+        {/* Add Task Button/Form */}
+        <GlassCard className="mb-6">
+          {!showAddForm ? (
+            <Button
+              onClick={() => setShowAddForm(true)}
+              className="w-full"
+              variant="ghost"
+            >
+              <Icons.Plus className="w-4 h-4 mr-2" />
+              Add New Task
+            </Button>
+          ) : (
+            <form onSubmit={handleCreateTask} className="p-4">
+              <input
+                type="text"
+                value={newTaskTitle}
+                onChange={(e) => setNewTaskTitle(e.target.value)}
+                placeholder="Task title..."
+                className="w-full px-3 py-2 mb-2 bg-white/50 dark:bg-gray-800/50 rounded border border-gray-300 dark:border-gray-600"
+                autoFocus
+              />
+              <textarea
+                value={newTaskDescription}
+                onChange={(e) => setNewTaskDescription(e.target.value)}
+                placeholder="Description (optional)"
+                className="w-full px-3 py-2 mb-3 bg-white/50 dark:bg-gray-800/50 rounded border border-gray-300 dark:border-gray-600"
+                rows={2}
+              />
+              <div className="flex items-center justify-between mb-3">
+                <div className="flex gap-2">
+                  {Object.values(TaskDuration).map(duration => (
+                    <button
+                      key={duration}
+                      type="button"
+                      onClick={() => setSelectedDuration(duration)}
+                      className={cn(
+                        "px-3 py-1 rounded text-sm transition-colors",
+                        selectedDuration === duration
+                          ? "bg-primary-500 text-white"
+                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                      )}
+                    >
+                      {duration}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button type="submit" disabled={!newTaskTitle.trim()}>
                   Add Task
                 </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  onClick={() => {
+                    setShowAddForm(false);
+                    setNewTaskTitle('');
+                    setNewTaskDescription('');
+                  }}
+                >
+                  Cancel
+                </Button>
               </div>
+            </form>
+          )}
+        </GlassCard>
+
+        {/* Tasks List */}
+        <div className="space-y-4">
+          {/* Pending Tasks */}
+          {pendingTasks.length > 0 && (
+            <GlassCard className="p-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
+                <Icons.Clock className="w-5 h-5 inline-block mr-2" />
+                Pending Tasks
+              </h2>
+              <AnimatePresence>
+                {pendingTasks.map(task => (
+                  <TaskItem key={task.id} task={task} />
+                ))}
+              </AnimatePresence>
             </GlassCard>
           )}
 
-          {/* Tasks Display */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Controller Tasks */}
-            <GlassCard className="p-6">
-              <h3 className="text-xl font-bold mb-4 text-neutral-900 dark:text-white">
-                Controller Tasks
-              </h3>
-              <div className="space-y-3">
-                {controllerTasks.length === 0 ? (
-                  <p className="text-neutral-500 text-center py-4">
-                    No controller tasks
-                  </p>
-                ) : (
-                  controllerTasks.map(renderTask)
-                )}
-              </div>
+          {/* Completed Tasks */}
+          {completedTasks.length > 0 && (
+            <GlassCard className="p-4">
+              <button
+                onClick={() => setShowCompleted(!showCompleted)}
+                className="flex items-center justify-between w-full mb-3"
+              >
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+                  <Icons.Check className="w-5 h-5 inline-block mr-2" />
+                  Completed Tasks ({completedTasks.length})
+                </h2>
+                <Icons.ChevronDown 
+                  className={cn(
+                    "w-5 h-5 transition-transform",
+                    showCompleted && "rotate-180"
+                  )}
+                />
+              </button>
+              {showCompleted && (
+                <AnimatePresence>
+                  {completedTasks.map(task => (
+                    <TaskItem key={task.id} task={task} />
+                  ))}
+                </AnimatePresence>
+              )}
             </GlassCard>
+          )}
 
-            {/* Main Tasks */}
-            <GlassCard className="p-6">
-              <h3 className="text-xl font-bold mb-4 text-neutral-900 dark:text-white">
-                Main Tasks
+          {/* Empty State */}
+          {tasks.length === 0 && (
+            <GlassCard className="p-12 text-center">
+              <Icons.ListX className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
+                No tasks yet
               </h3>
-              {Object.entries(tasksByDuration).map(([duration, durationTasks]) => (
-                <div key={duration} className="mb-6">
-                  <h4 className="text-sm font-medium text-neutral-600 dark:text-neutral-400 mb-2">
-                    {duration.replace('_', ' ')}
-                  </h4>
-                  <div className="space-y-3">
-                    {durationTasks.length === 0 ? (
-                      <p className="text-neutral-400 text-sm">No tasks</p>
-                    ) : (
-                      durationTasks.map(renderTask)
-                    )}
-                  </div>
-                </div>
-              ))}
+              <p className="text-gray-600 dark:text-gray-400 mb-4">
+                Start by adding your first daily task
+              </p>
+              <Button onClick={() => setShowAddForm(true)}>
+                <Icons.Plus className="w-4 h-4 mr-2" />
+                Add Your First Task
+              </Button>
             </GlassCard>
-          </div>
-        </>
-      )}
-
-      <ConfirmDialog
-        isOpen={deleteConfirm.isOpen}
-        onCancel={() => setDeleteConfirm({ isOpen: false, taskId: null })}
-        onConfirm={handleDeleteTask}
-        title="Delete Task Permanently"
-        message="This action cannot be undone. The task will be permanently deleted."
-        variant="danger"
-      />
-    </motion.div>
+          )}
+        </div>
+      </div>
+    </div>
   );
 };

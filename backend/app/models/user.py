@@ -20,3 +20,4 @@ class User(Base):
 
     # Relationships
     cards = relationship("Card", back_populates="user")
+    daily_tasks = relationship("DailyTask", back_populates="user")

@@ -36,4 +36,3 @@ class Card(Base):
     # Relationships
     user = relationship("User", back_populates="cards")
     focus_tasks = relationship("FocusTask", back_populates="card", cascade="all, delete-orphan")
-    daily_tasks = relationship("DailyTask", back_populates="card", cascade="all, delete-orphan")

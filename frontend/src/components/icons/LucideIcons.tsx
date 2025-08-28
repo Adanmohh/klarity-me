@@ -44,6 +44,7 @@ import {
   Play,
   Pause,
   List,
+  ListX,
   type LucideProps
 } from 'lucide-react';
 
@@ -60,8 +61,10 @@ export const Icons = {
   
   // Actions
   Add: (props: LucideProps) => <Plus size={20} {...props} />,
+  Plus: (props: LucideProps) => <Plus size={20} {...props} />,
   Edit: (props: LucideProps) => <Edit3 size={16} {...props} />,
   Delete: (props: LucideProps) => <Trash2 size={16} {...props} />,
+  Trash: (props: LucideProps) => <Trash2 size={16} {...props} />,
   Close: (props: LucideProps) => <X size={20} {...props} />,
   Check: (props: LucideProps) => <Check size={20} {...props} />,
   Refresh: (props: LucideProps) => <RefreshCw size={18} {...props} />,
@@ -70,6 +73,7 @@ export const Icons = {
   Move: (props: LucideProps) => <ArrowLeftRight size={18} {...props} />,
   Search: (props: LucideProps) => <Search size={20} {...props} />,
   Command: (props: LucideProps) => <Command size={16} {...props} />,
+  ListX: (props: LucideProps) => <ListX size={20} {...props} />,
   
   // UI Elements
   ChevronRight: (props: LucideProps) => <ChevronRight size={16} {...props} />,

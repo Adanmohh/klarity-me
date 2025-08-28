@@ -100,8 +100,8 @@ export const dailyTasksAPI = {
     return response.data;
   },
   
-  getTasksByCard: async (cardId: string): Promise<DailyTask[]> => {
-    const response = await api.get(`/daily-tasks/card/${cardId}`);
+  getTask: async (taskId: string): Promise<DailyTask> => {
+    const response = await api.get(`/daily-tasks/${taskId}`);
     return response.data;
   },
   
@@ -117,5 +117,15 @@ export const dailyTasksAPI = {
   
   deleteTask: async (taskId: string): Promise<void> => {
     await api.delete(`/daily-tasks/${taskId}`);
+  },
+  
+  completeTask: async (taskId: string): Promise<DailyTask> => {
+    const response = await api.post(`/daily-tasks/${taskId}/complete`);
+    return response.data;
+  },
+  
+  reopenTask: async (taskId: string): Promise<DailyTask> => {
+    const response = await api.post(`/daily-tasks/${taskId}/reopen`);
+    return response.data;
   }
 };

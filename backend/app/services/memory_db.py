@@ -198,6 +198,85 @@ def init_test_data():
     
     for task in tasks:
         memory_db["focus_tasks"][task["id"]] = task
+    
+    # Create sample daily tasks (independent from cards)
+    daily_tasks = [
+        {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "title": "Review inbox and emails",
+            "description": "Check and respond to important emails",
+            "duration": "15min",
+            "status": "pending",
+            "position": 0,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "completed_at": None
+        },
+        {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "title": "Daily standup meeting",
+            "description": "Team sync meeting at 10 AM",
+            "duration": "15min",
+            "status": "completed",
+            "position": 1,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "completed_at": datetime.now().isoformat()
+        },
+        {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "title": "Code review for PR #123",
+            "description": "Review frontend changes",
+            "duration": "30min",
+            "status": "pending",
+            "position": 2,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "completed_at": None
+        },
+        {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "title": "Update project documentation",
+            "description": "Add new API endpoints to docs",
+            "duration": "30min",
+            "status": "pending",
+            "position": 3,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "completed_at": None
+        },
+        {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "title": "Coffee break",
+            "description": "Take a quick break",
+            "duration": "10min",
+            "status": "completed",
+            "position": 4,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "completed_at": datetime.now().isoformat()
+        },
+        {
+            "id": str(uuid4()),
+            "user_id": user_id,
+            "title": "Test new deployment pipeline",
+            "description": "Verify CI/CD changes are working",
+            "duration": "30min",
+            "status": "pending",
+            "position": 5,
+            "created_at": datetime.now().isoformat(),
+            "updated_at": datetime.now().isoformat(),
+            "completed_at": None
+        }
+    ]
+    
+    for task in daily_tasks:
+        memory_db["daily_tasks"][task["id"]] = task
 
 # Initialize on module load
 init_test_data()

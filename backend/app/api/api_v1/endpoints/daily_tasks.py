@@ -1,136 +1,174 @@
 from typing import Any, List
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
+import logging
+from datetime import datetime
 
 from app.api import deps
-from app.crud.daily_task import daily_task_crud
-from app.crud.card import card_crud
-from app.db.session import get_db
 from app.models.user import User
 from app.schemas.daily_task import DailyTask, DailyTaskCreate, DailyTaskUpdate
 from app.core.config import settings
+from app.services.memory_db import memory_db_service as db_service
 
-# Import mock data functions for dev mode
-if settings.DEV_MODE:
-    from app.api.mock_data import (
-        get_mock_daily_tasks, create_mock_daily_task, get_mock_card
-    )
+logger = logging.getLogger(__name__)
 
 router = APIRouter()
 
 
 @router.get("/", response_model=List[DailyTask])
-async def read_all_daily_tasks(
-    *,
-    db: AsyncSession = Depends(get_db),
+async def read_daily_tasks(
+    skip: int = 0,
+    limit: int = 100,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
-    if settings.DEV_MODE:
-        from app.api.mock_data import mock_daily_tasks
-        from app.schemas.daily_task import DailyTask as DailyTaskSchema
-        return [DailyTaskSchema(**task) for task in mock_daily_tasks]
-    
-    # In production, would query all tasks for current user
-    return []
-
-
-@router.get("/card/{card_id}", response_model=List[DailyTask])
-async def read_daily_tasks_by_card(
-    *,
-    db: AsyncSession = Depends(get_db),
-    card_id: UUID,
-    current_user: User = Depends(deps.get_current_active_user),
-) -> Any:
-    if settings.DEV_MODE:
-        # Check card ownership in dev mode
-        card = get_mock_card(card_id, current_user.id)
-        if not card:
-            raise HTTPException(status_code=404, detail="Card not found")
-        return get_mock_daily_tasks(card_id)
-    
-    card = await card_crud.get(db, id=card_id)
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
-    if card.user_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-    
-    tasks = await daily_task_crud.get_by_card(db, card_id=card_id)
-    return tasks
+    """Get all daily tasks for the current user"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        tasks = await db_service.get_daily_tasks(user["id"])
+        return tasks
+    except Exception as e:
+        logger.error(f"Error getting daily tasks: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch daily tasks")
 
 
 @router.post("/", response_model=DailyTask)
 async def create_daily_task(
     *,
-    db: AsyncSession = Depends(get_db),
     task_in: DailyTaskCreate,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
-    if settings.DEV_MODE:
-        # Check card ownership in dev mode
-        card = get_mock_card(task_in.card_id, current_user.id)
-        if not card:
-            raise HTTPException(status_code=404, detail="Card not found")
-        return create_mock_daily_task(task_in.dict())
-    
-    card = await card_crud.get(db, id=task_in.card_id)
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
-    if card.user_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-    
-    task = await daily_task_crud.create(db, obj_in=task_in)
-    return task
+    """Create a new daily task"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        task = await db_service.create_daily_task(task_in.dict(exclude_unset=True), user["id"])
+        return task
+    except Exception as e:
+        logger.error(f"Error creating daily task: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create daily task")
+
+
+@router.get("/{task_id}", response_model=DailyTask)
+async def read_daily_task(
+    *,
+    task_id: UUID,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """Get a specific daily task"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        task = await db_service.get_daily_task(str(task_id), user["id"])
+        if not task:
+            raise HTTPException(status_code=404, detail="Task not found")
+        return task
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting daily task: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch daily task")
 
 
 @router.put("/{task_id}", response_model=DailyTask)
 async def update_daily_task(
     *,
-    db: AsyncSession = Depends(get_db),
     task_id: UUID,
     task_in: DailyTaskUpdate,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
-    if settings.DEV_MODE:
-        from app.api.mock_data import update_mock_daily_task
-        task = update_mock_daily_task(task_id, task_in.dict(exclude_unset=True))
-        if not task:
-            raise HTTPException(status_code=404, detail="Task not found")
+    """Update a daily task"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        
+        # If marking as completed, set completed_at
+        update_data = task_in.dict(exclude_unset=True)
+        if update_data.get("status") == "completed":
+            update_data["completed_at"] = datetime.now().isoformat()
+        
+        task = await db_service.update_daily_task(str(task_id), update_data, user["id"])
         return task
-    
-    task = await daily_task_crud.get(db, id=task_id)
-    if not task:
+    except ValueError as e:
         raise HTTPException(status_code=404, detail="Task not found")
-    
-    card = await card_crud.get(db, id=task.card_id)
-    if card.user_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-    
-    task = await daily_task_crud.update(db, db_obj=task, obj_in=task_in)
-    return task
+    except Exception as e:
+        logger.error(f"Error updating daily task: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update daily task")
 
 
 @router.delete("/{task_id}", response_model=DailyTask)
 async def delete_daily_task(
     *,
-    db: AsyncSession = Depends(get_db),
     task_id: UUID,
     current_user: User = Depends(deps.get_current_active_user),
 ) -> Any:
-    if settings.DEV_MODE:
-        from app.api.mock_data import delete_mock_daily_task
-        task = delete_mock_daily_task(task_id)
+    """Delete a daily task"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        
+        # Get task before deleting to return it
+        task = await db_service.get_daily_task(str(task_id), user["id"])
         if not task:
             raise HTTPException(status_code=404, detail="Task not found")
+        
+        success = await db_service.delete_daily_task(str(task_id), user["id"])
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete task")
+        
         return task
-    
-    task = await daily_task_crud.get(db, id=task_id)
-    if not task:
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting daily task: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete daily task")
+
+
+@router.post("/{task_id}/complete", response_model=DailyTask)
+async def complete_daily_task(
+    *,
+    task_id: UUID,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """Mark a daily task as completed"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        
+        update_data = {
+            "status": "completed",
+            "completed_at": datetime.now().isoformat()
+        }
+        
+        task = await db_service.update_daily_task(str(task_id), update_data, user["id"])
+        return task
+    except ValueError as e:
         raise HTTPException(status_code=404, detail="Task not found")
-    
-    card = await card_crud.get(db, id=task.card_id)
-    if card.user_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-    
-    task = await daily_task_crud.remove(db, id=task_id)
-    return task
+    except Exception as e:
+        logger.error(f"Error completing daily task: {e}")
+        raise HTTPException(status_code=500, detail="Failed to complete daily task")
+
+
+@router.post("/{task_id}/reopen", response_model=DailyTask)
+async def reopen_daily_task(
+    *,
+    task_id: UUID,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """Reopen a completed daily task"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        
+        update_data = {
+            "status": "pending",
+            "completed_at": None
+        }
+        
+        task = await db_service.update_daily_task(str(task_id), update_data, user["id"])
+        return task
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Task not found")
+    except Exception as e:
+        logger.error(f"Error reopening daily task: {e}")
+        raise HTTPException(status_code=500, detail="Failed to reopen daily task")

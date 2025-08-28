@@ -71,19 +71,19 @@ export enum DailyTaskStatus {
 
 export interface DailyTask {
   id: string;
+  user_id: string;
   title: string;
-  card_id: string;
-  lane: TaskLane;
+  description?: string;
   duration?: TaskDuration;
   status: DailyTaskStatus;
   position: number;
   created_at: string;
   updated_at?: string;
+  completed_at?: string;
 }
 
 export interface CardWithTasks extends Card {
   focus_tasks: FocusTask[];
-  daily_tasks: DailyTask[];
 }
 
 export interface AuthToken {
