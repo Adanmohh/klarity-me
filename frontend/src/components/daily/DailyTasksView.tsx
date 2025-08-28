@@ -232,7 +232,7 @@ export const DailyTasksView: React.FC = () => {
                         className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded"
                         title="Move to Main"
                       >
-                        <Icons.ArrowLeftRight className="w-4 h-4 text-blue-500" />
+                        <Icons.Move className="w-4 h-4 text-blue-500" />
                       </button>
                     )}
                   </div>
@@ -243,7 +243,7 @@ export const DailyTasksView: React.FC = () => {
                     className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded"
                     title="Move to Controller"
                   >
-                    <Icons.ArrowLeftRight className="w-4 h-4 text-blue-500" />
+                    <Icons.Move className="w-4 h-4 text-blue-500" />
                   </button>
                 )}
                 <button

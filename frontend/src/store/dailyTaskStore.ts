@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import { DailyTask, TaskLane } from '../types';
+import { DailyTask, DailyTaskLane } from '../types';
 
 interface DailyTaskStore {
   tasks: DailyTask[];
@@ -8,7 +8,7 @@ interface DailyTaskStore {
   addTask: (task: Omit<DailyTask, 'id'>) => void;
   updateTask: (id: string, data: Partial<DailyTask>) => void;
   deleteTask: (id: string) => void;
-  moveTask: (id: string, toLane: TaskLane) => void;
+  moveTask: (id: string, toLane: DailyTaskLane) => void;
 }
 
 export const useDailyTaskStore = create<DailyTaskStore>((set) => ({
