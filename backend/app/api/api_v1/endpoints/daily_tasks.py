@@ -7,6 +7,7 @@ from datetime import datetime
 from app.api import deps
 from app.models.user import User
 from app.schemas.daily_task import DailyTask, DailyTaskCreate, DailyTaskUpdate
+from app.models.daily_task import TaskLane
 from app.core.config import settings
 from app.services.memory_db import memory_db_service as db_service
 
@@ -172,3 +173,54 @@ async def reopen_daily_task(
     except Exception as e:
         logger.error(f"Error reopening daily task: {e}")
         raise HTTPException(status_code=500, detail="Failed to reopen daily task")
+
+
+@router.post("/{task_id}/move-to-main", response_model=DailyTask)
+async def move_to_main(
+    *,
+    task_id: UUID,
+    duration: str = None,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """Move a daily task from controller to main lane"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        
+        update_data = {
+            "lane": "main",
+            "duration": duration
+        }
+        
+        task = await db_service.update_daily_task(str(task_id), update_data, user["id"])
+        return task
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Task not found")
+    except Exception as e:
+        logger.error(f"Error moving task to main: {e}")
+        raise HTTPException(status_code=500, detail="Failed to move task")
+
+
+@router.post("/{task_id}/move-to-controller", response_model=DailyTask)
+async def move_to_controller(
+    *,
+    task_id: UUID,
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """Move a daily task from main to controller lane"""
+    try:
+        # Get or create dev user
+        user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
+        
+        update_data = {
+            "lane": "controller",
+            "duration": None
+        }
+        
+        task = await db_service.update_daily_task(str(task_id), update_data, user["id"])
+        return task
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail="Task not found")
+    except Exception as e:
+        logger.error(f"Error moving task to controller: {e}")
+        raise HTTPException(status_code=500, detail="Failed to move task")

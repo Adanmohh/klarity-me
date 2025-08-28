@@ -31,6 +31,11 @@ export interface Card {
   updated_at?: string;
 }
 
+export enum DailyTaskLane {
+  CONTROLLER = 'controller',
+  MAIN = 'main'
+}
+
 export enum TaskLane {
   CONTROLLER = 'controller',
   MAIN = 'main'
@@ -74,6 +79,7 @@ export interface DailyTask {
   user_id: string;
   title: string;
   description?: string;
+  lane: DailyTaskLane;
   duration?: TaskDuration;
   status: DailyTaskStatus;
   position: number;

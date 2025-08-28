@@ -8,6 +8,11 @@ import enum
 from app.db.base import Base
 
 
+class TaskLane(str, enum.Enum):
+    CONTROLLER = "controller"
+    MAIN = "main"
+
+
 class TaskDuration(str, enum.Enum):
     TEN_MIN = "10min"
     FIFTEEN_MIN = "15min"
@@ -27,6 +32,7 @@ class DailyTask(Base):
     user_id = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=False)
     title = Column(String, nullable=False)
     description = Column(String, nullable=True)
+    lane = Column(Enum(TaskLane), default=TaskLane.CONTROLLER)
     duration = Column(Enum(TaskDuration), nullable=True)
     status = Column(Enum(TaskStatus), default=TaskStatus.PENDING)
     position = Column(Integer, nullable=False, default=0)

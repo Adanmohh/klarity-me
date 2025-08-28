@@ -2,12 +2,13 @@ from typing import Optional
 from pydantic import BaseModel
 from uuid import UUID
 from datetime import datetime
-from app.models.daily_task import TaskDuration, TaskStatus
+from app.models.daily_task import TaskLane, TaskDuration, TaskStatus
 
 
 class DailyTaskBase(BaseModel):
     title: str
     description: Optional[str] = None
+    lane: TaskLane = TaskLane.CONTROLLER
     duration: Optional[TaskDuration] = None
     position: int = 0
 
@@ -19,6 +20,7 @@ class DailyTaskCreate(DailyTaskBase):
 class DailyTaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
+    lane: Optional[TaskLane] = None
     duration: Optional[TaskDuration] = None
     status: Optional[TaskStatus] = None
     position: Optional[int] = None
@@ -27,6 +29,7 @@ class DailyTaskUpdate(BaseModel):
 class DailyTaskInDBBase(DailyTaskBase):
     id: UUID
     user_id: UUID
+    lane: TaskLane
     status: TaskStatus
     created_at: datetime
     updated_at: Optional[datetime]

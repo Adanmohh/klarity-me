@@ -127,5 +127,17 @@ export const dailyTasksAPI = {
   reopenTask: async (taskId: string): Promise<DailyTask> => {
     const response = await api.post(`/daily-tasks/${taskId}/reopen`);
     return response.data;
+  },
+  
+  moveToMain: async (taskId: string, duration?: string): Promise<DailyTask> => {
+    const response = await api.post(`/daily-tasks/${taskId}/move-to-main`, null, {
+      params: duration ? { duration } : {}
+    });
+    return response.data;
+  },
+  
+  moveToController: async (taskId: string): Promise<DailyTask> => {
+    const response = await api.post(`/daily-tasks/${taskId}/move-to-controller`);
+    return response.data;
   }
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { TaskDuration, DailyTaskStatus, type DailyTask } from '../../types';
+import { TaskDuration, DailyTaskStatus, DailyTaskLane, type DailyTask } from '../../types';
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
 import { Icons } from '../icons/LucideIcons';
@@ -12,9 +12,9 @@ export const DailyTasksView: React.FC = () => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<TaskDuration>(TaskDuration.FIFTEEN_MIN);
-  const [showCompleted, setShowCompleted] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [selectedLane, setSelectedLane] = useState<DailyTaskLane>(DailyTaskLane.CONTROLLER);
 
   useEffect(() => {
     loadTasks();
@@ -32,16 +32,16 @@ export const DailyTasksView: React.FC = () => {
     }
   };
 
-  // Filter tasks based on completion status
-  const pendingTasks = tasks.filter(task => task.status === DailyTaskStatus.PENDING);
-  const completedTasks = tasks.filter(task => task.status === DailyTaskStatus.COMPLETED);
+  // Separate tasks by lane
+  const controllerTasks = tasks.filter(task => task.lane === DailyTaskLane.CONTROLLER);
+  const mainTasks = tasks.filter(task => task.lane === DailyTaskLane.MAIN);
 
-  // Group tasks by duration for better organization
-  const tasksByDuration = {
-    [TaskDuration.TEN_MIN]: pendingTasks.filter(task => task.duration === TaskDuration.TEN_MIN),
-    [TaskDuration.FIFTEEN_MIN]: pendingTasks.filter(task => task.duration === TaskDuration.FIFTEEN_MIN),
-    [TaskDuration.THIRTY_MIN]: pendingTasks.filter(task => task.duration === TaskDuration.THIRTY_MIN),
-    'No Duration': pendingTasks.filter(task => !task.duration),
+  // Group main tasks by duration
+  const mainTasksByDuration = {
+    [TaskDuration.TEN_MIN]: mainTasks.filter(task => task.duration === TaskDuration.TEN_MIN),
+    [TaskDuration.FIFTEEN_MIN]: mainTasks.filter(task => task.duration === TaskDuration.FIFTEEN_MIN),
+    [TaskDuration.THIRTY_MIN]: mainTasks.filter(task => task.duration === TaskDuration.THIRTY_MIN),
+    'No Duration': mainTasks.filter(task => !task.duration),
   };
 
   const handleCreateTask = async (e: React.FormEvent) => {
@@ -52,9 +52,10 @@ export const DailyTasksView: React.FC = () => {
       const newTask = await dailyTasksAPI.createTask({
         title: newTaskTitle.trim(),
         description: newTaskDescription.trim() || undefined,
-        duration: selectedDuration,
+        lane: selectedLane,
+        duration: selectedLane === DailyTaskLane.MAIN ? selectedDuration : undefined,
         status: DailyTaskStatus.PENDING,
-        position: tasks.length,
+        position: tasks.filter(t => t.lane === selectedLane).length,
       });
       
       setTasks([...tasks, newTask]);
@@ -63,6 +64,24 @@ export const DailyTasksView: React.FC = () => {
       setShowAddForm(false);
     } catch (error) {
       console.error('Failed to create task:', error);
+    }
+  };
+
+  const handleMoveToMain = async (taskId: string, duration?: TaskDuration) => {
+    try {
+      const updatedTask = await dailyTasksAPI.moveToMain(taskId, duration);
+      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+    } catch (error) {
+      console.error('Failed to move task to main:', error);
+    }
+  };
+
+  const handleMoveToController = async (taskId: string) => {
+    try {
+      const updatedTask = await dailyTasksAPI.moveToController(taskId);
+      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
+    } catch (error) {
+      console.error('Failed to move task to controller:', error);
     }
   };
 
@@ -102,10 +121,11 @@ export const DailyTasksView: React.FC = () => {
     }
   };
 
-  const TaskItem: React.FC<{ task: DailyTask }> = ({ task }) => {
+  const TaskItem: React.FC<{ task: DailyTask; showMoveButton?: boolean }> = ({ task, showMoveButton = false }) => {
     const [isEditing, setIsEditing] = useState(false);
     const [editTitle, setEditTitle] = useState(task.title);
     const [editDescription, setEditDescription] = useState(task.description || '');
+    const [showDurationSelect, setShowDurationSelect] = useState(false);
 
     const handleSaveEdit = async () => {
       if (editTitle.trim() && (editTitle !== task.title || editDescription !== task.description)) {
@@ -188,6 +208,44 @@ export const DailyTasksView: React.FC = () => {
           <div className="flex items-center gap-1">
             {!isEditing && (
               <>
+                {showMoveButton && task.lane === DailyTaskLane.CONTROLLER && (
+                  <div className="relative">
+                    {showDurationSelect ? (
+                      <div className="absolute right-0 top-0 bg-white dark:bg-gray-800 rounded-lg shadow-lg p-2 z-10">
+                        <div className="text-xs font-medium mb-1">Select duration:</div>
+                        {Object.values(TaskDuration).map(duration => (
+                          <button
+                            key={duration}
+                            onClick={() => {
+                              handleMoveToMain(task.id, duration);
+                              setShowDurationSelect(false);
+                            }}
+                            className="block w-full px-2 py-1 text-left text-sm hover:bg-gray-100 dark:hover:bg-gray-700 rounded"
+                          >
+                            {duration}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <button
+                        onClick={() => setShowDurationSelect(true)}
+                        className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded"
+                        title="Move to Main"
+                      >
+                        <Icons.ArrowLeftRight className="w-4 h-4 text-blue-500" />
+                      </button>
+                    )}
+                  </div>
+                )}
+                {showMoveButton && task.lane === DailyTaskLane.MAIN && (
+                  <button
+                    onClick={() => handleMoveToController(task.id)}
+                    className="p-1 hover:bg-blue-100 dark:hover:bg-blue-900/30 rounded"
+                    title="Move to Controller"
+                  >
+                    <Icons.ArrowLeftRight className="w-4 h-4 text-blue-500" />
+                  </button>
+                )}
                 <button
                   onClick={() => setIsEditing(true)}
                   className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded"
@@ -220,7 +278,7 @@ export const DailyTasksView: React.FC = () => {
 
   return (
     <div className="p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
@@ -231,29 +289,7 @@ export const DailyTasksView: React.FC = () => {
           </p>
         </div>
 
-        {/* Stats */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <GlassCard className="p-4 text-center">
-            <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
-              {pendingTasks.length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Pending</div>
-          </GlassCard>
-          <GlassCard className="p-4 text-center">
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {completedTasks.length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Completed Today</div>
-          </GlassCard>
-          <GlassCard className="p-4 text-center">
-            <div className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-              {tasks.length}
-            </div>
-            <div className="text-sm text-gray-600 dark:text-gray-400">Total</div>
-          </GlassCard>
-        </div>
-
-        {/* Add Task Button/Form */}
+        {/* Add Task Form */}
         <GlassCard className="mb-6">
           {!showAddForm ? (
             <Button
@@ -266,6 +302,32 @@ export const DailyTasksView: React.FC = () => {
             </Button>
           ) : (
             <form onSubmit={handleCreateTask} className="p-4">
+              <div className="flex gap-2 mb-3">
+                <button
+                  type="button"
+                  onClick={() => setSelectedLane(DailyTaskLane.CONTROLLER)}
+                  className={cn(
+                    "px-3 py-1 rounded text-sm transition-colors",
+                    selectedLane === DailyTaskLane.CONTROLLER
+                      ? "bg-primary-500 text-white"
+                      : "bg-gray-200 dark:bg-gray-700"
+                  )}
+                >
+                  Add to Controller
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLane(DailyTaskLane.MAIN)}
+                  className={cn(
+                    "px-3 py-1 rounded text-sm transition-colors",
+                    selectedLane === DailyTaskLane.MAIN
+                      ? "bg-primary-500 text-white"
+                      : "bg-gray-200 dark:bg-gray-700"
+                  )}
+                >
+                  Add to Main
+                </button>
+              </div>
               <input
                 type="text"
                 value={newTaskTitle}
@@ -281,25 +343,28 @@ export const DailyTasksView: React.FC = () => {
                 className="w-full px-3 py-2 mb-3 bg-white/50 dark:bg-gray-800/50 rounded border border-gray-300 dark:border-gray-600"
                 rows={2}
               />
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex gap-2">
-                  {Object.values(TaskDuration).map(duration => (
-                    <button
-                      key={duration}
-                      type="button"
-                      onClick={() => setSelectedDuration(duration)}
-                      className={cn(
-                        "px-3 py-1 rounded text-sm transition-colors",
-                        selectedDuration === duration
-                          ? "bg-primary-500 text-white"
-                          : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
-                      )}
-                    >
-                      {duration}
-                    </button>
-                  ))}
+              {selectedLane === DailyTaskLane.MAIN && (
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-sm text-gray-600 dark:text-gray-400">Duration:</span>
+                  <div className="flex gap-2">
+                    {Object.values(TaskDuration).map(duration => (
+                      <button
+                        key={duration}
+                        type="button"
+                        onClick={() => setSelectedDuration(duration)}
+                        className={cn(
+                          "px-3 py-1 rounded text-sm transition-colors",
+                          selectedDuration === duration
+                            ? "bg-primary-500 text-white"
+                            : "bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600"
+                        )}
+                      >
+                        {duration}
+                      </button>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
               <div className="flex gap-2">
                 <Button type="submit" disabled={!newTaskTitle.trim()}>
                   Add Task
@@ -320,67 +385,92 @@ export const DailyTasksView: React.FC = () => {
           )}
         </GlassCard>
 
-        {/* Tasks List */}
-        <div className="space-y-4">
-          {/* Pending Tasks */}
-          {pendingTasks.length > 0 && (
-            <GlassCard className="p-4">
-              <h2 className="text-lg font-semibold text-gray-900 dark:text-white mb-3">
-                <Icons.Clock className="w-5 h-5 inline-block mr-2" />
-                Pending Tasks
+        {/* Horizontal Lanes */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Controller Lane */}
+          <GlassCard className="p-4">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Icons.Layers className="w-5 h-5" />
+                Controller
               </h2>
-              <AnimatePresence>
-                {pendingTasks.map(task => (
-                  <TaskItem key={task.id} task={task} />
-                ))}
-              </AnimatePresence>
-            </GlassCard>
-          )}
-
-          {/* Completed Tasks */}
-          {completedTasks.length > 0 && (
-            <GlassCard className="p-4">
-              <button
-                onClick={() => setShowCompleted(!showCompleted)}
-                className="flex items-center justify-between w-full mb-3"
-              >
-                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
-                  <Icons.Check className="w-5 h-5 inline-block mr-2" />
-                  Completed Tasks ({completedTasks.length})
-                </h2>
-                <Icons.ChevronDown 
-                  className={cn(
-                    "w-5 h-5 transition-transform",
-                    showCompleted && "rotate-180"
-                  )}
-                />
-              </button>
-              {showCompleted && (
-                <AnimatePresence>
-                  {completedTasks.map(task => (
-                    <TaskItem key={task.id} task={task} />
-                  ))}
-                </AnimatePresence>
-              )}
-            </GlassCard>
-          )}
-
-          {/* Empty State */}
-          {tasks.length === 0 && (
-            <GlassCard className="p-12 text-center">
-              <Icons.ListX className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 dark:text-white mb-2">
-                No tasks yet
-              </h3>
-              <p className="text-gray-600 dark:text-gray-400 mb-4">
-                Start by adding your first daily task
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Task ideas and unorganized items
               </p>
-              <Button onClick={() => setShowAddForm(true)}>
-                <Icons.Plus className="w-4 h-4 mr-2" />
-                Add Your First Task
-              </Button>
-            </GlassCard>
-          )}
+            </div>
+            <div className="space-y-2 max-h-[500px] overflow-y-auto">
+              <AnimatePresence>
+                {controllerTasks.length > 0 ? (
+                  controllerTasks.map(task => (
+                    <TaskItem key={task.id} task={task} showMoveButton />
+                  ))
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Icons.ListX className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                    <p>No tasks in controller</p>
+                  </div>
+                )}
+              </AnimatePresence>
+            </div>
+          </GlassCard>
+
+          {/* Main Lane */}
+          <GlassCard className="p-4">
+            <div className="mb-4">
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center gap-2">
+                <Icons.Target className="w-5 h-5" />
+                Main Tasks
+              </h2>
+              <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                Organized tasks with time estimates
+              </p>
+            </div>
+            <div className="space-y-4 max-h-[500px] overflow-y-auto">
+              {Object.entries(mainTasksByDuration).map(([duration, durationTasks]) => (
+                durationTasks.length > 0 && (
+                  <div key={duration}>
+                    <div className="text-sm font-medium text-gray-600 dark:text-gray-400 mb-2">
+                      {duration}
+                    </div>
+                    <AnimatePresence>
+                      {durationTasks.map(task => (
+                        <TaskItem key={task.id} task={task} showMoveButton />
+                      ))}
+                    </AnimatePresence>
+                  </div>
+                )
+              ))}
+              {mainTasks.length === 0 && (
+                <div className="text-center py-8 text-gray-500">
+                  <Icons.ListX className="w-8 h-8 mx-auto mb-2 opacity-50" />
+                  <p>No tasks in main</p>
+                  <p className="text-sm mt-2">Move tasks from Controller to get started</p>
+                </div>
+              )}
+            </div>
+          </GlassCard>
+        </div>
+
+        {/* Stats Summary */}
+        <div className="grid grid-cols-3 gap-4 mt-6">
+          <GlassCard className="p-4 text-center">
+            <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {controllerTasks.filter(t => t.status !== DailyTaskStatus.COMPLETED).length}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Controller Tasks</div>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <div className="text-2xl font-bold text-primary-600 dark:text-primary-400">
+              {mainTasks.filter(t => t.status !== DailyTaskStatus.COMPLETED).length}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Main Tasks</div>
+          </GlassCard>
+          <GlassCard className="p-4 text-center">
+            <div className="text-2xl font-bold text-green-600 dark:text-green-400">
+              {tasks.filter(t => t.status === DailyTaskStatus.COMPLETED).length}
+            </div>
+            <div className="text-sm text-gray-600 dark:text-gray-400">Completed Today</div>
+          </GlassCard>
         </div>
       </div>
     </div>
