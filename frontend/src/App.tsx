@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
-import { MainLayout } from './components/layout/MainLayout';
+import { ProfessionalSidebar } from './components/layout/ProfessionalSidebar';
 import { Dashboard } from './pages/Dashboard';
 import { Archive } from './pages/Archive';
 import { DeepWorkDashboard } from './pages/DeepWorkDashboard';
 import { FocusPage } from './pages/FocusPage';
 import { CardCarousel } from './components/cards/CardCarousel';
 import { DailyTasksView } from './components/daily/DailyTasksView';
+import DailyTasksViewStyled from './components/daily/DailyTasksViewStyled';
 import { DreamJournalView } from './components/journal/DreamJournalView';
 import { CreateCardModal } from './components/cards/CreateCardModal';
 import { CardDetailView } from './components/cards/CardDetailView';
@@ -18,6 +19,7 @@ import { Diagnostics } from './components/Diagnostics';
 import { Plus, Zap } from 'lucide-react';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { GlobalSearch } from './components/search/GlobalSearch';
+import './styles/globals.css';
 import './index.css';
 
 function AppContent() {
@@ -141,7 +143,7 @@ function AppContent() {
 
   return (
     <>
-      <MainLayout
+      <ProfessionalSidebar
         currentRoute={location.pathname}
         onNavigate={handleNavigate}
         onCreateCard={() => setIsCreateModalOpen(true)}
@@ -162,14 +164,14 @@ function AppContent() {
           } />
           <Route path="/focus" element={<FocusPage />} />
           <Route path="/card/:id" element={<CardDetailPage />} />
-          <Route path="/daily" element={<DailyTasksView />} />
+          <Route path="/daily" element={<DailyTasksViewStyled />} />
           <Route path="/journal" element={<DreamJournalView />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/archive" element={<Archive />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/diagnostics" element={<Diagnostics />} />
         </Routes>
-      </MainLayout>
+      </ProfessionalSidebar>
 
       <CreateCardModal
         isOpen={isCreateModalOpen}
