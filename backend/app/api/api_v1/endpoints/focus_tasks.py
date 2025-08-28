@@ -11,13 +11,32 @@ from app.models.user import User
 from app.schemas.focus_task import FocusTask, FocusTaskCreate, FocusTaskUpdate
 from app.core.config import settings
 
-# Import mock data functions for dev mode
+# Import mock data functions for dev mode  
 if settings.DEV_MODE:
     from app.api.mock_data import (
         get_mock_focus_tasks, create_mock_focus_task, get_mock_card
     )
 
 router = APIRouter()
+
+
+@router.get("/", response_model=List[FocusTask])
+async def read_all_focus_tasks(
+    *,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(deps.get_current_active_user),
+) -> Any:
+    """Get all focus tasks for the current user"""
+    if settings.DEV_MODE:
+        # Return all mock focus tasks
+        from app.api.mock_data import get_all_mock_focus_tasks
+        return get_all_mock_focus_tasks(current_user.id)
+    
+    # In production, would query all tasks for user's cards
+    tasks = await focus_task_crud.get_all_by_user(db, user_id=current_user.id)
+    if not tasks:
+        return []
+    return tasks
 
 
 @router.get("/card/{card_id}", response_model=List[FocusTask])

@@ -142,6 +142,16 @@ def get_mock_focus_tasks(card_id: UUID) -> List[FocusTask]:
     tasks = [task for task in mock_focus_tasks if task.get("card_id") == card_id]
     return [FocusTask(**task) for task in tasks]
 
+def get_all_mock_focus_tasks(user_id: UUID) -> List[FocusTask]:
+    """Get all focus tasks for a user"""
+    # Get all cards for the user first
+    user_cards = [card for card in mock_cards if card.get("user_id") == user_id]
+    card_ids = [card.get("id") for card in user_cards]
+    
+    # Get all tasks for those cards
+    tasks = [task for task in mock_focus_tasks if task.get("card_id") in card_ids]
+    return [FocusTask(**task) for task in tasks]
+
 def create_mock_focus_task(task_data: dict) -> FocusTask:
     """Create a new focus task"""
     from app.models.focus_task import TaskStatus
