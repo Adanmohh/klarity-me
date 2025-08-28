@@ -141,3 +141,72 @@ export const dailyTasksAPI = {
     return response.data;
   }
 };
+
+export const identityAPI = {
+  getSettings: async (): Promise<any> => {
+    const response = await api.get('/identity/');
+    return response.data;
+  },
+  
+  updateSettings: async (settings: any): Promise<any> => {
+    const response = await api.put('/identity/', settings);
+    return response.data;
+  },
+  
+  addStatement: async (statement: any): Promise<any> => {
+    const response = await api.post('/identity/statements', statement);
+    return response.data;
+  },
+  
+  updateStatement: async (id: string, statement: any): Promise<any> => {
+    const response = await api.put(`/identity/statements/${id}`, statement);
+    return response.data;
+  },
+  
+  deleteStatement: async (id: string): Promise<void> => {
+    await api.delete(`/identity/statements/${id}`);
+  }
+};
+
+export const habitsAPI = {
+  getAll: async (lane?: 'becoming' | 'i_am'): Promise<any[]> => {
+    const response = await api.get('/habits/', {
+      params: lane ? { lane } : {}
+    });
+    return response.data;
+  },
+  
+  create: async (habit: any): Promise<any> => {
+    const response = await api.post('/habits/', habit);
+    return response.data;
+  },
+  
+  get: async (id: string): Promise<any> => {
+    const response = await api.get(`/habits/${id}`);
+    return response.data;
+  },
+  
+  update: async (id: string, habit: any): Promise<any> => {
+    const response = await api.put(`/habits/${id}`, habit);
+    return response.data;
+  },
+  
+  delete: async (id: string): Promise<void> => {
+    await api.delete(`/habits/${id}`);
+  },
+  
+  checkIn: async (habitId: string, checkIn: any): Promise<any> => {
+    const response = await api.post(`/habits/${habitId}/checkin`, checkIn);
+    return response.data;
+  },
+  
+  graduate: async (habitId: string, graduation: any): Promise<any> => {
+    const response = await api.post(`/habits/${habitId}/graduate`, graduation);
+    return response.data;
+  },
+  
+  getStats: async (habitId: string): Promise<any> => {
+    const response = await api.get(`/habits/${habitId}/stats`);
+    return response.data;
+  }
+};

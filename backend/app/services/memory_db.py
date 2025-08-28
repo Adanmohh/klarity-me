@@ -370,6 +370,8 @@ class MemoryDatabaseService:
             "sessions_count": 0,
             "where_left_off": None,
             "momentum_score": 0,
+            "position": 0,  # Default position
+            "status": "queued",  # Default status
             **card_data
         }
         memory_db["cards"][card_id] = card

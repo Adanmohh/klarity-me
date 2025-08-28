@@ -16,7 +16,7 @@ interface TaskCardProps {
   isArchived?: boolean;
 }
 
-export const TaskCard: React.FC<TaskCardProps> = ({
+export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(({
   task,
   taskType,
   onUpdate,
@@ -24,7 +24,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   onMove,
   moveButtonText,
   isArchived = false
-}) => {
+}, ref) => {
   const [isEditing, setIsEditing] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title);
@@ -145,6 +145,7 @@ export const TaskCard: React.FC<TaskCardProps> = ({
   return (
     <>
       <MagicCard
+        ref={ref}
         className={`task-card group ${isCompleted ? 'opacity-60' : ''}`}
         gradientColor={taskType === 'focus' ? '#FFD700' : '#60A5FA'}
         gradientOpacity={0.2}
@@ -243,4 +244,6 @@ export const TaskCard: React.FC<TaskCardProps> = ({
       />
     </>
   );
-};
+});
+
+TaskCard.displayName = 'TaskCard';

@@ -28,6 +28,7 @@ export const ProfessionalSidebar: React.FC<ProfessionalSidebarProps> = ({
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [expandedSections, setExpandedSections] = useState<Record<string, boolean>>({
     main: true,
+    identity: true,
     tools: false,
   });
   const isCommandPaletteOpen = isCommandPaletteOpenProp || localCommandPaletteOpen;
@@ -77,6 +78,28 @@ export const ProfessionalSidebar: React.FC<ProfessionalSidebarProps> = ({
           path: '/journal',
           badge: null,
           description: 'Capture thoughts',
+        },
+      ],
+    },
+    {
+      id: 'identity',
+      title: 'Identity',
+      items: [
+        {
+          id: 'habits',
+          label: 'Habits',
+          icon: Icons.Target,
+          path: '/habits',
+          badge: null,
+          description: 'Build new habits',
+        },
+        {
+          id: 'identity',
+          label: 'Identity Settings',
+          icon: Icons.User,
+          path: '/identity',
+          badge: null,
+          description: 'Define who you are',
         },
       ],
     },

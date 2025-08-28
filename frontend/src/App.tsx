@@ -6,6 +6,8 @@ import { Dashboard } from './pages/Dashboard';
 import { Archive } from './pages/Archive';
 import { DeepWorkDashboard } from './pages/DeepWorkDashboard';
 import { FocusPage } from './pages/FocusPage';
+import IdentitySettings from './pages/IdentitySettings';
+import Habits from './pages/Habits';
 import { CardCarousel } from './components/cards/CardCarousel';
 import { DailyTasksView } from './components/daily/DailyTasksView';
 import DailyTasksViewStyled from './components/daily/DailyTasksViewStyled';
@@ -168,6 +170,8 @@ function AppContent() {
           <Route path="/journal" element={<DreamJournalView />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/archive" element={<Archive />} />
+          <Route path="/identity" element={<IdentitySettings />} />
+          <Route path="/habits" element={<Habits />} />
           <Route path="/settings" element={<SettingsPage />} />
           <Route path="/diagnostics" element={<Diagnostics />} />
         </Routes>
@@ -190,7 +194,7 @@ function AppContent() {
 function App() {
   return (
     <ThemeProvider>
-      <Router>
+      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <AppContent />
       </Router>
     </ThemeProvider>

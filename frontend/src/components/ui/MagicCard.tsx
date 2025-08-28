@@ -1,4 +1,4 @@
-import React, { useCallback, useRef, useState } from 'react';
+import React, { useCallback, useRef, useState, forwardRef, useImperativeHandle } from 'react';
 import { motion } from 'framer-motion';
 import { cn } from '../../utils/cn';
 
@@ -10,23 +10,26 @@ interface MagicCardProps {
   gradientOpacity?: number;
 }
 
-export const MagicCard: React.FC<MagicCardProps> = ({
+export const MagicCard = forwardRef<HTMLDivElement, MagicCardProps>(({
   children,
   className,
   gradientSize = 200,
   gradientColor = '#FFD700',
   gradientOpacity = 0.3,
-}) => {
-  const ref = useRef<HTMLDivElement>(null);
+}, forwardedRef) => {
+  const internalRef = useRef<HTMLDivElement>(null);
+  
+  // Merge refs
+  useImperativeHandle(forwardedRef, () => internalRef.current!, []);
   const [rotateX, setRotateX] = useState(0);
   const [rotateY, setRotateY] = useState(0);
   const [gradientPosition, setGradientPosition] = useState({ x: 0, y: 0 });
 
   const handleMouseMove = useCallback(
     (e: React.MouseEvent<HTMLDivElement>) => {
-      if (!ref.current) return;
+      if (!internalRef.current) return;
 
-      const rect = ref.current.getBoundingClientRect();
+      const rect = internalRef.current.getBoundingClientRect();
       const centerX = rect.left + rect.width / 2;
       const centerY = rect.top + rect.height / 2;
       
@@ -52,7 +55,7 @@ export const MagicCard: React.FC<MagicCardProps> = ({
 
   return (
     <motion.div
-      ref={ref}
+      ref={internalRef}
       className={cn(
         'relative overflow-hidden rounded-xl',
         'transform-gpu',
@@ -89,4 +92,6 @@ export const MagicCard: React.FC<MagicCardProps> = ({
       </div>
     </motion.div>
   );
-};
+});
+
+MagicCard.displayName = 'MagicCard';
