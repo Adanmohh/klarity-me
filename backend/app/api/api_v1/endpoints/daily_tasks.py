@@ -43,7 +43,12 @@ async def create_daily_task(
     try:
         # Get or create dev user
         user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
-        task = await db_service.create_daily_task(task_in.dict(exclude_unset=True), user["id"])
+        # Convert pydantic model to dict, converting enum to string
+        task_data = task_in.dict(exclude_unset=True)
+        # Ensure enums are converted to strings
+        if "lane" in task_data and hasattr(task_data["lane"], "value"):
+            task_data["lane"] = task_data["lane"].value
+        task = await db_service.create_daily_task(task_data, user["id"])
         return task
     except Exception as e:
         logger.error(f"Error creating daily task: {e}")
@@ -83,8 +88,15 @@ async def update_daily_task(
         # Get or create dev user
         user = await db_service.get_or_create_user(current_user.email if hasattr(current_user, 'email') else "dev@example.com")
         
-        # If marking as completed, set completed_at
+        # Convert pydantic model to dict
         update_data = task_in.dict(exclude_unset=True)
+        
+        # Ensure enums are converted to strings
+        for key in ["lane", "status", "duration"]:
+            if key in update_data and hasattr(update_data[key], "value"):
+                update_data[key] = update_data[key].value
+        
+        # If marking as completed, set completed_at
         if update_data.get("status") == "completed":
             update_data["completed_at"] = datetime.now().isoformat()
         

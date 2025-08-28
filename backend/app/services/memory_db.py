@@ -465,13 +465,24 @@ class MemoryDatabaseService:
     async def create_daily_task(self, task_data: Dict[str, Any], user_id: str) -> Dict[str, Any]:
         """Create a new daily task"""
         task_id = str(uuid4())
+        # Set defaults first
         task = {
             "id": task_id,
             "user_id": user_id,
+            "status": "pending",  # Default status
+            "completed_at": None,  # Default completed_at
+            "position": len([t for t in memory_db["daily_tasks"].values() if t.get("user_id") == user_id]),  # Auto-position
             "created_at": datetime.now().isoformat(),
             "updated_at": datetime.now().isoformat(),
-            **task_data
         }
+        # Update with provided data, but don't overwrite defaults if not provided
+        for key, value in task_data.items():
+            task[key] = value
+        # Ensure required fields are present
+        if "status" not in task:
+            task["status"] = "pending"
+        if "completed_at" not in task:
+            task["completed_at"] = None
         memory_db["daily_tasks"][task_id] = task
         return task
     
