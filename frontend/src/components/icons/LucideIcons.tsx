@@ -52,6 +52,11 @@ import {
   Loader,
   Lightbulb,
   Inbox,
+  Smile,
+  Meh,
+  Frown,
+  FileText,
+  Circle,
   type LucideProps
 } from 'lucide-react';
 
@@ -134,6 +139,15 @@ export const Icons = {
   CheckCircle: (props: LucideProps) => <CheckCircle size={18} {...props} />,
   Success: (props: LucideProps) => <CheckCircle size={18} {...props} />,
   Error: (props: LucideProps) => <XCircle size={18} {...props} />,
+  
+  // Mood Icons
+  Smile: (props: LucideProps) => <Smile size={20} {...props} />,
+  Meh: (props: LucideProps) => <Meh size={20} {...props} />,
+  Frown: (props: LucideProps) => <Frown size={20} {...props} />,
+  
+  // Document Icons
+  FileText: (props: LucideProps) => <FileText size={20} {...props} />,
+  Circle: (props: LucideProps) => <Circle size={20} {...props} />,
 };
 
 // Export type for icon names

@@ -71,20 +71,20 @@ export const ProfessionalSidebar: React.FC<ProfessionalSidebarProps> = ({
           badge: '3',
           description: 'Today\'s priorities',
         },
-        {
-          id: 'journal',
-          label: 'Mind Journal',
-          icon: Icons.Dreams,
-          path: '/journal',
-          badge: null,
-          description: 'Capture thoughts',
-        },
       ],
     },
     {
       id: 'identity',
       title: 'Identity',
       items: [
+        {
+          id: 'journal',
+          label: 'Mind Journal',
+          icon: Icons.Dreams,
+          path: '/journal',
+          badge: null,
+          description: 'Capture thoughts & reflections',
+        },
         {
           id: 'habits',
           label: 'Habits',

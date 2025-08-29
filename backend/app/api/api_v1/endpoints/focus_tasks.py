@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models.user import User
 from app.schemas.focus_task import FocusTask, FocusTaskCreate, FocusTaskUpdate
 from app.core.config import settings
+from app.services.database import db_service
 
 # Import mock data functions for dev mode  
 if settings.DEV_MODE:
@@ -32,11 +33,9 @@ async def read_all_focus_tasks(
         from app.api.mock_data import get_all_mock_focus_tasks
         return get_all_mock_focus_tasks(current_user.id)
     
-    # In production, would query all tasks for user's cards
-    tasks = await focus_task_crud.get_all_by_user(db, user_id=current_user.id)
-    if not tasks:
-        return []
-    return tasks
+    # Use Supabase for production
+    tasks = await db_service.get_focus_tasks()
+    return tasks if tasks else []
 
 
 @router.get("/card/{card_id}", response_model=List[FocusTask])
@@ -53,13 +52,12 @@ async def read_focus_tasks_by_card(
             raise HTTPException(status_code=404, detail="Card not found")
         return get_mock_focus_tasks(card_id)
     
-    card = await card_crud.get(db, id=card_id)
+    # Use Supabase for production
+    card = await db_service.get_card(str(card_id), str(current_user.id))
     if not card:
         raise HTTPException(status_code=404, detail="Card not found")
-    if card.user_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
     
-    tasks = await focus_task_crud.get_by_card(db, card_id=card_id)
+    tasks = await db_service.get_focus_tasks(card_id=str(card_id))
     return tasks
 
 
@@ -77,13 +75,10 @@ async def create_focus_task(
             raise HTTPException(status_code=404, detail="Card not found")
         return create_mock_focus_task(task_in.dict())
     
-    card = await card_crud.get(db, id=task_in.card_id)
-    if not card:
-        raise HTTPException(status_code=404, detail="Card not found")
-    if card.user_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
-    
-    task = await focus_task_crud.create(db, obj_in=task_in)
+    # Use Supabase for production
+    task_data = task_in.dict()
+    task_data["card_id"] = str(task_data["card_id"])
+    task = await db_service.create_focus_task(task_data)
     return task
 
 
@@ -103,16 +98,23 @@ async def update_focus_task(
             raise HTTPException(status_code=404, detail="Task not found")
         return task
     
-    task = await focus_task_crud.get(db, id=task_id)
+    # Use Supabase for production
+    task = await db_service.get_focus_task(str(task_id))
     if not task:
-        raise HTTPException(status_code=404, detail="Task not found")
+        # Create new task if it doesn't exist (for frontend sync)
+        task_data = task_in.dict(exclude_unset=True)
+        task_data["id"] = str(task_id)
+        if "card_id" in task_data:
+            task_data["card_id"] = str(task_data["card_id"])
+        task = await db_service.create_focus_task(task_data)
+        return task
     
-    card = await card_crud.get(db, id=task.card_id)
-    if card.user_id != current_user.id:
-        raise HTTPException(status_code=400, detail="Not enough permissions")
+    task_data = task_in.dict(exclude_unset=True)
+    if "card_id" in task_data:
+        task_data["card_id"] = str(task_data["card_id"])
     
-    task = await focus_task_crud.update(db, db_obj=task, obj_in=task_in)
-    return task
+    updated_task = await db_service.update_focus_task(str(task_id), task_data)
+    return updated_task
 
 
 @router.delete("/{task_id}", response_model=FocusTask)
@@ -130,13 +132,17 @@ async def delete_focus_task(
             raise HTTPException(status_code=404, detail="Task not found")
         return task
     
-    task = await focus_task_crud.get(db, id=task_id)
+    # Use Supabase for production
+    task = await db_service.get_focus_task(str(task_id))
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     
-    card = await card_crud.get(db, id=task.card_id)
-    if card.user_id != current_user.id:
+    # Verify ownership through card
+    card = await db_service.get_card(str(task.get("card_id")), str(current_user.id))
+    if not card:
         raise HTTPException(status_code=400, detail="Not enough permissions")
     
-    task = await focus_task_crud.remove(db, id=task_id)
+    success = await db_service.delete_focus_task(str(task_id))
+    if not success:
+        raise HTTPException(status_code=404, detail="Task not found")
     return task

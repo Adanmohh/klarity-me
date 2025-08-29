@@ -61,13 +61,16 @@ mock_daily_tasks: List[dict] = []
 
 def get_mock_cards(user_id: UUID) -> List[Card]:
     """Get all cards for a user"""
-    user_cards = [card for card in mock_cards if card["user_id"] == user_id]
+    user_id_str = str(user_id)
+    user_cards = [card for card in mock_cards if str(card["user_id"]) == user_id_str]
     return [Card(**card) for card in user_cards]
 
 def get_mock_card(card_id: UUID, user_id: UUID) -> Optional[Card]:
     """Get a single card"""
+    card_id_str = str(card_id)
+    user_id_str = str(user_id)
     for card in mock_cards:
-        if card["id"] == card_id and card["user_id"] == user_id:
+        if str(card["id"]) == card_id_str and str(card["user_id"]) == user_id_str:
             return Card(**card)
     return None
 

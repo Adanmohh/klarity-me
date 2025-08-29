@@ -47,7 +47,7 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: Optional[str] = None
     
     # Development Mode - Enable to use in-memory database
-    DEV_MODE: bool = True
+    DEV_MODE: bool = False
 
     class Config:
         case_sensitive = True

@@ -104,12 +104,13 @@ export const DailyTasksViewStyled: React.FC = () => {
     }
   };
 
-  const TaskCard = ({ task }: { task: DailyTask }) => {
+  const TaskCard = React.forwardRef<HTMLDivElement, { task: DailyTask }>(({ task }, ref) => {
     const isCompleted = task.status === DailyTaskStatus.COMPLETED;
     const isMoving = movingTaskId === task.id;
     
     return (
       <motion.div
+        ref={ref}
         layout
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -215,7 +216,7 @@ export const DailyTasksViewStyled: React.FC = () => {
         )}
       </motion.div>
     );
-  };
+  });
 
   if (loading) {
     return (

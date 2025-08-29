@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Icons } from '../icons/LucideIcons';
 import { cn } from '../../utils/cn';
+import { fadeInUp, buttonScale } from '../../utils/animations';
 
 interface SearchBarProps {
   placeholder?: string;
@@ -60,11 +61,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
         'relative flex items-center',
         className
       )}
-      initial={false}
-      animate={{
+      initial={{ opacity: 0, y: -10 }}
+      animate={{ 
+        opacity: 1, 
+        y: 0,
         scale: isFocused ? 1.02 : 1,
       }}
-      transition={{ duration: 0.2 }}
+      transition={{ 
+        duration: 0.3,
+        scale: { duration: 0.2 }
+      }}
     >
       <div className={cn(
         'relative w-full flex items-center',
@@ -75,7 +81,16 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           ? 'border-primary-500 shadow-gold-sm' 
           : 'border-neutral-200 dark:border-neutral-700 hover:border-neutral-300 dark:hover:border-neutral-600'
       )}>
-        <Icons.Search className="absolute left-3 w-5 h-5 text-neutral-400 dark:text-neutral-500 pointer-events-none" />
+        <motion.div
+          animate={{ 
+            rotate: isFocused ? 360 : 0,
+            scale: isFocused ? 1.1 : 1
+          }}
+          transition={{ duration: 0.3 }}
+          className="absolute left-3 pointer-events-none"
+        >
+          <Icons.Search className="w-5 h-5 text-neutral-400 dark:text-neutral-500" />
+        </motion.div>
         
         <input
           type="text"
@@ -95,29 +110,45 @@ export const SearchBar: React.FC<SearchBarProps> = ({
           )}
         />
         
-        {localValue && (
-          <motion.button
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.8 }}
-            onClick={handleClear}
-            className="absolute right-14 p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
-            type="button"
-          >
-            <Icons.Close className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
-          </motion.button>
-        )}
+        <AnimatePresence>
+          {localValue && (
+            <motion.button
+              initial={{ opacity: 0, scale: 0.8, rotate: -90 }}
+              animate={{ opacity: 1, scale: 1, rotate: 0 }}
+              exit={{ opacity: 0, scale: 0.8, rotate: 90 }}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleClear}
+              className="absolute right-14 p-1 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors"
+              type="button"
+            >
+              <Icons.Close className="w-4 h-4 text-neutral-500 dark:text-neutral-400" />
+            </motion.button>
+          )}
+        </AnimatePresence>
         
-        {showShortcut && (
-          <div className="absolute right-3 flex items-center gap-1">
-            <kbd className="px-1.5 py-0.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded">
-              Ctrl
-            </kbd>
-            <kbd className="px-1.5 py-0.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded">
-              /
-            </kbd>
-          </div>
-        )}
+        <AnimatePresence>
+          {showShortcut && !localValue && (
+            <motion.div 
+              className="absolute right-3 flex items-center gap-1"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <motion.kbd 
+                whileHover={{ scale: 1.05 }}
+                className="px-1.5 py-0.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded">
+                Ctrl
+              </motion.kbd>
+              <motion.kbd 
+                whileHover={{ scale: 1.05 }}
+                className="px-1.5 py-0.5 text-xs font-semibold text-neutral-500 dark:text-neutral-400 bg-neutral-100 dark:bg-neutral-800 border border-neutral-200 dark:border-neutral-700 rounded">
+                /
+              </motion.kbd>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
     </motion.div>
   );

@@ -12,6 +12,7 @@ import { CardCarousel } from './components/cards/CardCarousel';
 import { DailyTasksView } from './components/daily/DailyTasksView';
 import DailyTasksViewStyled from './components/daily/DailyTasksViewStyled';
 import { DreamJournalView } from './components/journal/DreamJournalView';
+import { MindJournalView } from './components/journal/MindJournalView';
 import { CreateCardModal } from './components/cards/CreateCardModal';
 import { CardDetailView } from './components/cards/CardDetailView';
 import { useCardStore } from './store/cardStore';
@@ -167,7 +168,8 @@ function AppContent() {
           <Route path="/focus" element={<FocusPage />} />
           <Route path="/card/:id" element={<CardDetailPage />} />
           <Route path="/daily" element={<DailyTasksViewStyled />} />
-          <Route path="/journal" element={<DreamJournalView />} />
+          <Route path="/journal" element={<MindJournalView />} />
+          <Route path="/dream-journal" element={<DreamJournalView />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
           <Route path="/archive" element={<Archive />} />
           <Route path="/identity" element={<IdentitySettings />} />
