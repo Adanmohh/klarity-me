@@ -15,6 +15,7 @@ import {
   RefreshCw,
   ArrowLeftRight,
   ArrowLeft,
+  ArrowRight,
   Search,
   Command,
   ChevronRight,
@@ -81,6 +82,7 @@ export const Icons = {
   Move: (props: LucideProps) => <ArrowLeftRight size={18} {...props} />,
   ArrowLeft: (props: LucideProps) => <ArrowLeft size={18} {...props} />,
   ArrowLeftRight: (props: LucideProps) => <ArrowLeftRight size={18} {...props} />,
+  MoveRight: (props: LucideProps) => <ArrowRight size={18} {...props} />,
   RotateCcw: (props: LucideProps) => <RotateCcw size={18} {...props} />,
   Search: (props: LucideProps) => <Search size={20} {...props} />,
   Command: (props: LucideProps) => <Command size={16} {...props} />,
@@ -129,6 +131,7 @@ export const Icons = {
   AlertCircle: (props: LucideProps) => <AlertCircle size={18} {...props} />,
   AlertTriangle: (props: LucideProps) => <AlertTriangle size={18} {...props} />,
   Info: (props: LucideProps) => <Info size={18} {...props} />,
+  CheckCircle: (props: LucideProps) => <CheckCircle size={18} {...props} />,
   Success: (props: LucideProps) => <CheckCircle size={18} {...props} />,
   Error: (props: LucideProps) => <XCircle size={18} {...props} />,
 };
