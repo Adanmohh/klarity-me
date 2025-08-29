@@ -156,8 +156,9 @@ def create_mock_focus_task(task_data: dict) -> FocusTask:
     """Create a new focus task"""
     from app.models.focus_task import TaskStatus
     
+    task_id = uuid4()
     new_task = {
-        "id": uuid4(),
+        "id": task_id,
         "card_id": task_data.get("card_id"),
         "title": task_data.get("title", "New Task"),
         "description": task_data.get("description", ""),
@@ -170,10 +171,12 @@ def create_mock_focus_task(task_data: dict) -> FocusTask:
         "updated_at": datetime.now()
     }
     mock_focus_tasks.append(new_task)
+    print(f"Created focus task with ID: {task_id}")
     return FocusTask(**new_task)
 
 def update_mock_focus_task(task_id: UUID, updates: dict) -> Optional[FocusTask]:
     """Update an existing focus task"""
+    # First check if the task exists, if not create it with the updates
     for i, task in enumerate(mock_focus_tasks):
         if task.get("id") == task_id:
             for key, value in updates.items():
@@ -181,8 +184,33 @@ def update_mock_focus_task(task_id: UUID, updates: dict) -> Optional[FocusTask]:
                     task[key] = value
             task["updated_at"] = datetime.now()
             mock_focus_tasks[i] = task
+            print(f"Updated focus task with ID: {task_id}")
             return FocusTask(**task)
-    return None
+    
+    # Task doesn't exist - this can happen when frontend has tasks from initial card data
+    # Create a new task with the given ID and updates
+    from app.models.focus_task import TaskStatus
+    print(f"Task {task_id} not found, creating new task with updates")
+    new_task = {
+        "id": task_id,
+        "card_id": updates.get("card_id", uuid4()),  # Need a card_id
+        "title": updates.get("title", "Untitled Task"),
+        "description": updates.get("description", ""),
+        "status": updates.get("status", TaskStatus.ACTIVE),
+        "lane": updates.get("lane", "controller"),
+        "position": updates.get("position", 0),
+        "date": updates.get("date"),
+        "tags": updates.get("tags", []),
+        "created_at": datetime.now(),
+        "updated_at": datetime.now()
+    }
+    # Apply any other updates
+    for key, value in updates.items():
+        if value is not None and key not in new_task:
+            new_task[key] = value
+    
+    mock_focus_tasks.append(new_task)
+    return FocusTask(**new_task)
 
 def delete_mock_focus_task(task_id: UUID) -> Optional[FocusTask]:
     """Delete a focus task"""

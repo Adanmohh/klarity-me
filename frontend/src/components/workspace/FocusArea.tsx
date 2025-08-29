@@ -11,7 +11,7 @@ interface FocusAreaProps {
 }
 
 export const FocusArea: React.FC<FocusAreaProps> = ({ card }) => {
-  const [tasks, setTasks] = useState(card.focus_tasks);
+  const [tasks, setTasks] = useState(card.focus_tasks || []);
   const [showArchived, setShowArchived] = useState(false);
   const [activeFilters, setActiveFilters] = useState({
     tags: [] as string[],
@@ -60,7 +60,13 @@ export const FocusArea: React.FC<FocusAreaProps> = ({ card }) => {
 
   const handleUpdateTask = async (taskId: string, updates: Partial<FocusTask>) => {
     try {
-      const updatedTask = await focusTasksAPI.updateTask(taskId, updates);
+      // Ensure card_id is always included for backend mock data
+      const taskToUpdate = tasks.find(t => t.id === taskId);
+      const updatesWithCardId = {
+        ...updates,
+        card_id: taskToUpdate?.card_id || card.id
+      };
+      const updatedTask = await focusTasksAPI.updateTask(taskId, updatesWithCardId);
       setTasks(tasks.map(task => 
         task.id === taskId ? updatedTask : task
       ));
@@ -135,31 +141,52 @@ export const FocusArea: React.FC<FocusAreaProps> = ({ card }) => {
       </div>
 
       {!showArchived ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <TaskLaneComponent
-            title="Controller"
-            subtitle="Dump miscellaneous tasks here"
-            tasks={controllerTasks}
-            onCreateTask={(title) => handleCreateTask(title, TaskLane.CONTROLLER)}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleArchiveTask}
-            onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.MAIN)}
-            moveButtonText="Move to Main →"
-            taskType="focus"
-          />
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr,auto,1fr] gap-4 lg:gap-6 min-h-0">
+          {/* Controller Lane */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 lg:p-6 flex flex-col min-h-0">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Controller</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Dump miscellaneous tasks here</p>
+            </div>
+            <TaskLaneComponent
+              title=""
+              subtitle=""
+              tasks={controllerTasks}
+              onCreateTask={(title) => handleCreateTask(title, TaskLane.CONTROLLER)}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleArchiveTask}
+              onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.MAIN)}
+              moveButtonText="Move to Main →"
+              taskType="focus"
+              hideHeader
+            />
+          </div>
 
-          <TaskLaneComponent
-            title="Main Task List"
-            subtitle="Organized focus tasks"
-            tasks={filteredMainTasks}
-            onCreateTask={(title) => handleCreateTask(title, TaskLane.MAIN)}
-            onUpdateTask={handleUpdateTask}
-            onDeleteTask={handleArchiveTask}
-            onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.CONTROLLER)}
-            moveButtonText="← Move to Controller"
-            taskType="focus"
-            showFilters
-          />
+          {/* Divider */}
+          <div className="hidden lg:flex items-center justify-center">
+            <div className="w-px h-full bg-gradient-to-b from-transparent via-gray-300 dark:via-gray-600 to-transparent"></div>
+          </div>
+
+          {/* Main Task List Lane */}
+          <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg p-4 lg:p-6 flex flex-col min-h-0">
+            <div className="mb-4">
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Main Task List</h3>
+              <p className="text-sm text-gray-600 dark:text-gray-400">Organized focus tasks</p>
+            </div>
+            <TaskLaneComponent
+              title=""
+              subtitle=""
+              tasks={filteredMainTasks}
+              onCreateTask={(title) => handleCreateTask(title, TaskLane.MAIN)}
+              onUpdateTask={handleUpdateTask}
+              onDeleteTask={handleArchiveTask}
+              onMoveTask={(taskId) => handleMoveTask(taskId, TaskLane.CONTROLLER)}
+              moveButtonText="← Move to Controller"
+              taskType="focus"
+              showFilters
+              hideHeader
+            />
+          </div>
         </div>
       ) : (
         <TaskLaneComponent

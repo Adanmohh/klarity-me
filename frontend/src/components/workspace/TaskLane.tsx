@@ -18,6 +18,7 @@ interface TaskLaneProps {
   taskType: 'focus' | 'daily';
   showFilters?: boolean;
   isArchiveView?: boolean;
+  hideHeader?: boolean;
 }
 
 export const TaskLane: React.FC<TaskLaneProps> = ({
@@ -31,7 +32,8 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
   moveButtonText,
   taskType,
   showFilters = false,
-  isArchiveView = false
+  isArchiveView = false,
+  hideHeader = false
 }) => {
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [showAddForm, setShowAddForm] = useState(false);
@@ -67,15 +69,17 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
   );
 
   return (
-    <GlassCard className="task-lane">
-      <div className="mb-4">
-        <h3 className="text-lg font-semibold text-primary-black dark:text-white mb-1">
-          {title}
-        </h3>
-        <p className="text-sm text-gray-600 dark:text-gray-400">
-          {subtitle}
-        </p>
-      </div>
+    <div className="flex flex-col h-full">
+      {!hideHeader && (
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold text-primary-black dark:text-white mb-1">
+            {title}
+          </h3>
+          <p className="text-sm text-gray-600 dark:text-gray-400">
+            {subtitle}
+          </p>
+        </div>
+      )}
 
       {/* Active Tasks */}
       <div className="space-y-3 mb-4">
@@ -168,6 +172,6 @@ export const TaskLane: React.FC<TaskLaneProps> = ({
           </div>
         </div>
       )}
-    </GlassCard>
+    </div>
   );
 };
