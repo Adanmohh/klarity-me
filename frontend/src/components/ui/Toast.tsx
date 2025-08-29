@@ -39,8 +39,8 @@ const Toast: React.FC<ToastProps> = ({ toast, onClose }) => {
   }, [toast.id, duration, onClose]);
 
   const icons = {
-    success: <Icons.CheckCircle className="w-5 h-5" />,
-    error: <Icons.AlertCircle className="w-5 h-5" />,
+    success: <Icons.Check className="w-5 h-5" />,
+    error: <Icons.Error className="w-5 h-5" />,
     warning: <Icons.AlertTriangle className="w-5 h-5" />,
     info: <Icons.Info className="w-5 h-5" />,
   };

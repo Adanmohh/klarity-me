@@ -149,7 +149,6 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(({
         initial="hidden"
         animate="visible"
         exit={{ opacity: 0, x: -50 }}
-        variants={fadeInUp}
         whileHover="hover"
         variants={cardHover}
         className="relative"
