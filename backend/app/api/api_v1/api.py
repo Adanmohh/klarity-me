@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.api.api_v1.endpoints import auth, cards, focus_tasks, daily_tasks, identity, habits
-from app.api.api_v1.endpoints import focus_tasks_supabase
+from app.api.api_v1.endpoints import focus_tasks_supabase, identity_rag
 from app.api import ai_agents
 
 api_router = APIRouter()
@@ -11,5 +11,6 @@ api_router.include_router(focus_tasks.router, prefix="/focus-tasks", tags=["focu
 api_router.include_router(focus_tasks_supabase.router, prefix="/focus-tasks-supabase", tags=["focus-tasks-supabase"])
 api_router.include_router(daily_tasks.router, prefix="/daily-tasks", tags=["daily-tasks"])
 api_router.include_router(identity.router, prefix="/identity", tags=["identity"])
+api_router.include_router(identity_rag.router, prefix="/identity", tags=["identity-rag"])
 api_router.include_router(habits.router, prefix="/habits", tags=["habits"])
 api_router.include_router(ai_agents.router, tags=["ai-agents"])
