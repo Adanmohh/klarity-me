@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { FocusTask, DailyTask, TaskStatus, DailyTaskStatus, TaskDuration } from '../../types';
 import { Button } from '../ui/Button';
 import { MagicCard } from '../ui/MagicCard';
 import { Icons } from '../icons/LucideIcons';
 import { ConfirmDialog } from '../ui/ConfirmDialog';
+import { cardHover, fadeInUp } from '../../utils/animations';
 
 interface TaskCardProps {
   task: FocusTask | DailyTask;
@@ -144,32 +145,50 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(({
 
   return (
     <>
-      <MagicCard
-        ref={ref}
-        className={`task-card group ${isCompleted ? 'opacity-60' : ''}`}
-        gradientColor={taskType === 'focus' ? '#FFD700' : '#60A5FA'}
-        gradientOpacity={0.2}
+      <motion.div
+        initial="hidden"
+        animate="visible"
+        exit={{ opacity: 0, x: -50 }}
+        variants={fadeInUp}
+        whileHover="hover"
+        variants={cardHover}
+        className="relative"
       >
+        <MagicCard
+          ref={ref}
+          className={`task-card group ${isCompleted ? 'opacity-60' : ''}`}
+          gradientColor={taskType === 'focus' ? '#FFD700' : '#60A5FA'}
+          gradientOpacity={0.2}
+        >
       <div className="p-4">
         <div className="flex items-start justify-between mb-2">
           <h4 className={`font-medium ${isCompleted ? 'line-through text-gray-500 dark:text-gray-400' : 'text-primary-black dark:text-white'}`}>
             {task.title}
           </h4>
-          <div className="opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-            <button
+          <motion.div 
+            className="flex space-x-1"
+            initial={{ opacity: 0 }}
+            whileHover={{ opacity: 1 }}
+            transition={{ duration: 0.2 }}
+          >
+            <motion.button
               onClick={() => setIsEditing(true)}
               className="text-xs text-gray-500 dark:text-gray-400 hover:text-primary-black dark:hover:text-white"
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
             >
               Edit
-            </button>
-            <button
+            </motion.button>
+            <motion.button
               onClick={() => setShowDeleteConfirm(true)}
               className="text-xs text-red-500 hover:text-red-700"
               aria-label={isArchived ? "Delete task" : "Archive task"}
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.95 }}
             >
               {isArchived ? 'Delete' : 'Archive'}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
         </div>
 
         {taskType === 'focus' && (task as FocusTask).description && (
@@ -207,28 +226,44 @@ export const TaskCard = React.forwardRef<HTMLDivElement, TaskCardProps>(({
           </div>
 
           <div className="flex space-x-1">
-            {!isArchived && (
+            <AnimatePresence>
+              {!isArchived && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  exit={{ scale: 0 }}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
+                  <Button
+                    size="sm"
+                    variant={isCompleted ? "primary" : "secondary"}
+                    onClick={handleToggleComplete}
+                  >
+                    {isCompleted ? <Icons.Refresh className="w-4 h-4" /> : <Icons.Check className="w-4 h-4" />}
+                  </Button>
+                </motion.div>
+              )}
+            </AnimatePresence>
+            
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <Button
                 size="sm"
-                variant={isCompleted ? "primary" : "secondary"}
-                onClick={handleToggleComplete}
+                variant={isArchived ? "primary" : "ghost"}
+                onClick={() => onMove(task.id)}
+                title={moveButtonText}
               >
-                {isCompleted ? <Icons.Refresh className="w-4 h-4" /> : <Icons.Check className="w-4 h-4" />}
+                {isArchived ? <Icons.Refresh className="w-4 h-4" /> : <Icons.Move className="w-4 h-4" />}
               </Button>
-            )}
-            
-            <Button
-              size="sm"
-              variant={isArchived ? "primary" : "ghost"}
-              onClick={() => onMove(task.id)}
-              title={moveButtonText}
-            >
-              {isArchived ? <Icons.Refresh className="w-4 h-4" /> : <Icons.Move className="w-4 h-4" />}
-            </Button>
+            </motion.div>
           </div>
         </div>
       </div>
-      </MagicCard>
+        </MagicCard>
+      </motion.div>
       
       <ConfirmDialog
         isOpen={showDeleteConfirm}

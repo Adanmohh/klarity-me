@@ -9,6 +9,8 @@ import { StatsSkeleton, ContentSkeleton } from '../components/ui/SkeletonLoader'
 import { useCardStore } from '../store/cardStore';
 import { useDailyTaskStore } from '../store/dailyTaskStore';
 import { DailyTaskStatus } from '../types';
+import { TextReveal } from '../components/ui/TextReveal';
+import { fadeInUp, staggerChildren, cardHover, blurFade } from '../utils/animations';
 
 interface DashboardProps {
   cards: Card[];
@@ -102,21 +104,31 @@ export const Dashboard: React.FC<DashboardProps> = ({
     <div className="p-4 md:p-6 lg:p-8 max-w-7xl mx-auto">
       {/* Welcome Section - Responsive text sizes */}
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial="hidden"
+        animate="visible"
+        variants={staggerChildren}
         className="mb-6 md:mb-8"
       >
-        <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2">
-          Welcome back
-        </h1>
-        <p className="text-base md:text-lg lg:text-xl text-gray-600 dark:text-gray-400">
+        <TextReveal
+          text="Welcome back"
+          className="text-3xl md:text-4xl lg:text-5xl font-bold text-gray-900 dark:text-white mb-2"
+          type="letter"
+          duration={0.3}
+        />
+        <motion.p 
+          className="text-base md:text-lg lg:text-xl text-gray-600 dark:text-gray-400"
+          variants={fadeInUp}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.5 }}
+        >
           {new Date().toLocaleDateString('en-US', { 
             weekday: 'long', 
             year: 'numeric', 
             month: 'long', 
             day: 'numeric' 
           })}
-        </p>
+        </motion.p>
       </motion.div>
 
       {/* Stats Grid - Fully responsive with proper mobile layout */}
@@ -153,12 +165,14 @@ export const Dashboard: React.FC<DashboardProps> = ({
         ].map((stat, index) => (
           <motion.div
             key={stat.label}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial="hidden"
+            animate="visible"
+            variants={blurFade}
             transition={{ delay: index * 0.1 }}
+            whileHover={{ scale: 1.05, transition: { duration: 0.2 } }}
           >
             <GlassCard 
-              className="p-4 md:p-6 hover:scale-105 transition-transform"
+              className="p-4 md:p-6 transition-all"
               variant="default"
               hoverable
             >
@@ -195,8 +209,9 @@ export const Dashboard: React.FC<DashboardProps> = ({
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 md:gap-8">
         {/* Today's Focus Card - Full width on mobile */}
         <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
+          initial="hidden"
+          animate="visible"
+          variants={blurFade}
           transition={{ delay: 0.2 }}
           className="lg:col-span-2"
         >
@@ -238,18 +253,35 @@ export const Dashboard: React.FC<DashboardProps> = ({
               </div>
 
               {/* Quick Actions - Stack on mobile */}
-              <div className="flex flex-col sm:flex-row gap-3 mt-6">
-                <Button 
-                  variant="primary" 
-                  className="flex-1 sm:flex-initial"
-                  onClick={() => navigate(`/card/${focusCard.id}`)}
+              <motion.div 
+                className="flex flex-col sm:flex-row gap-3 mt-6"
+                initial="hidden"
+                animate="visible"
+                variants={staggerChildren}
+              >
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  variants={fadeInUp}
                 >
-                  Open Card
-                </Button>
-                <Button variant="secondary" className="flex-1 sm:flex-initial">
-                  Add Task
-                </Button>
-              </div>
+                  <Button 
+                    variant="primary" 
+                    className="flex-1 sm:flex-initial w-full"
+                    onClick={() => navigate(`/card/${focusCard.id}`)}
+                  >
+                    Open Card
+                  </Button>
+                </motion.div>
+                <motion.div
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  variants={fadeInUp}
+                >
+                  <Button variant="secondary" className="flex-1 sm:flex-initial w-full">
+                    Add Task
+                  </Button>
+                </motion.div>
+              </motion.div>
             </GlassCard>
           ) : (
             <GlassCard variant="subtle" className="p-8 text-center">
