@@ -77,8 +77,44 @@ def get_mock_card_with_tasks(card_id: UUID, user_id: UUID) -> Optional[CardWithT
     if not card:
         return None
     
-    focus_tasks = [FocusTask(**task) for task in mock_focus_tasks if task.get("card_id") == card_id]
-    daily_tasks = [DailyTask(**task) for task in mock_daily_tasks if task.get("card_id") == card_id]
+    # Get existing tasks for this card
+    focus_tasks = [FocusTask(**task) for task in mock_focus_tasks if str(task.get("card_id")) == str(card_id)]
+    daily_tasks = [DailyTask(**task) for task in mock_daily_tasks if str(task.get("card_id")) == str(card_id)]
+    
+    # If no focus tasks exist for this card, create some sample tasks
+    if not focus_tasks:
+        from app.models.focus_task import TaskStatus
+        sample_tasks = [
+            {
+                "id": uuid4(),
+                "card_id": card_id,
+                "title": "Sample Task 1",
+                "description": "This is a sample task in the controller lane",
+                "status": TaskStatus.ACTIVE,
+                "lane": "controller",
+                "position": 0,
+                "date": None,
+                "tags": [],
+                "created_at": datetime.now(),
+                "updated_at": datetime.now()
+            },
+            {
+                "id": uuid4(),
+                "card_id": card_id,
+                "title": "Sample Task 2",
+                "description": "This is a sample task in the main lane",
+                "status": TaskStatus.ACTIVE,
+                "lane": "main",
+                "position": 0,
+                "date": None,
+                "tags": [],
+                "created_at": datetime.now(),
+                "updated_at": datetime.now()
+            }
+        ]
+        # Add these tasks to the mock storage
+        mock_focus_tasks.extend(sample_tasks)
+        focus_tasks = [FocusTask(**task) for task in sample_tasks]
     
     return CardWithTasks(
         **card.dict(),
@@ -139,17 +175,19 @@ def delete_mock_card(card_id: UUID, user_id: UUID) -> Optional[Card]:
 
 def get_mock_focus_tasks(card_id: UUID) -> List[FocusTask]:
     """Get focus tasks for a card"""
-    tasks = [task for task in mock_focus_tasks if task.get("card_id") == card_id]
+    card_id_str = str(card_id)
+    tasks = [task for task in mock_focus_tasks if str(task.get("card_id")) == card_id_str]
     return [FocusTask(**task) for task in tasks]
 
 def get_all_mock_focus_tasks(user_id: UUID) -> List[FocusTask]:
     """Get all focus tasks for a user"""
     # Get all cards for the user first
-    user_cards = [card for card in mock_cards if card.get("user_id") == user_id]
-    card_ids = [card.get("id") for card in user_cards]
+    user_id_str = str(user_id)
+    user_cards = [card for card in mock_cards if str(card.get("user_id")) == user_id_str]
+    card_ids = [str(card.get("id")) for card in user_cards]
     
     # Get all tasks for those cards
-    tasks = [task for task in mock_focus_tasks if task.get("card_id") in card_ids]
+    tasks = [task for task in mock_focus_tasks if str(task.get("card_id")) in card_ids]
     return [FocusTask(**task) for task in tasks]
 
 def create_mock_focus_task(task_data: dict) -> FocusTask:
@@ -177,8 +215,11 @@ def create_mock_focus_task(task_data: dict) -> FocusTask:
 def update_mock_focus_task(task_id: UUID, updates: dict) -> Optional[FocusTask]:
     """Update an existing focus task"""
     # First check if the task exists, if not create it with the updates
+    # Convert task_id to string for comparison
+    task_id_str = str(task_id)
     for i, task in enumerate(mock_focus_tasks):
-        if task.get("id") == task_id:
+        # Compare as strings to handle both UUID and string IDs
+        if str(task.get("id")) == task_id_str:
             for key, value in updates.items():
                 if value is not None:
                     task[key] = value
@@ -215,8 +256,9 @@ def update_mock_focus_task(task_id: UUID, updates: dict) -> Optional[FocusTask]:
 def delete_mock_focus_task(task_id: UUID) -> Optional[FocusTask]:
     """Delete a focus task"""
     global mock_focus_tasks
+    task_id_str = str(task_id)
     for i, task in enumerate(mock_focus_tasks):
-        if task.get("id") == task_id:
+        if str(task.get("id")) == task_id_str:
             deleted_task = mock_focus_tasks.pop(i)
             return FocusTask(**deleted_task)
     return None
