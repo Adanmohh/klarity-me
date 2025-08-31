@@ -34,6 +34,7 @@ import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { GlobalSearch } from './components/search/GlobalSearch';
 import './styles/globals.css';
 import './index.css';
+import { useAuthStore } from './store/authStore';
 
 function AppContent() {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ function AppContent() {
 
   const { cards, fetchCards, createCard } = useCardStore();
   const { tasks } = useDailyTaskStore();
+  const { isAuthenticated } = useAuthStore();
 
   useEffect(() => {
     // Load initial data
@@ -154,16 +156,16 @@ function AppContent() {
     </div>
   );
 
-  return (
-    <>
-      <ProfessionalSidebar
-        currentRoute={location.pathname}
-        onNavigate={handleNavigate}
-        onCreateCard={() => setIsCreateModalOpen(true)}
-        onCreateTask={handleCreateTask}
-        isCommandPaletteOpen={isCommandPaletteOpen}
-        onCloseCommandPalette={() => setIsCommandPaletteOpen(false)}
-      >
+  // Check if current route is an auth page
+  const isAuthPage = location.pathname.startsWith('/auth') || 
+                     location.pathname === '/login' || 
+                     location.pathname === '/signup' || 
+                     location.pathname === '/register';
+
+  // If it's an auth page, render without sidebar
+  if (isAuthPage) {
+    return (
+      <>
         <Routes>
           {/* Auth routes - accessible only when NOT authenticated */}
           <Route path="/auth/login" element={
@@ -200,7 +202,23 @@ function AppContent() {
             <ResetPasswordForm />
           } />
           <Route path="/auth/callback" element={<AuthCallback />} />
+        </Routes>
+      </>
+    );
+  }
 
+  // Regular app with sidebar
+  return (
+    <>
+      <ProfessionalSidebar
+        currentRoute={location.pathname}
+        onNavigate={handleNavigate}
+        onCreateCard={() => setIsCreateModalOpen(true)}
+        onCreateTask={handleCreateTask}
+        isCommandPaletteOpen={isCommandPaletteOpen}
+        onCloseCommandPalette={() => setIsCommandPaletteOpen(false)}
+      >
+        <Routes>
           {/* Protected routes - accessible only when authenticated */}
           <Route path="/" element={
             <ProtectedRoute>

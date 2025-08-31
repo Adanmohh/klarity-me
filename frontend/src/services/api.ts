@@ -10,17 +10,27 @@ const api = axios.create({
   },
 });
 
-// Add auth token to requests (skipped in dev mode)
+// Add auth token to requests
 api.interceptors.request.use((config) => {
-  // Dev mode: no auth needed
+  const token = localStorage.getItem('token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
   return config;
 });
 
-// Handle auth errors (disabled in dev mode)
+// Handle auth errors
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    // In dev mode, ignore auth errors
+    if (error.response?.status === 401) {
+      // Clear auth and redirect to login
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      if (window.location.pathname !== '/auth/login') {
+        window.location.href = '/auth/login';
+      }
+    }
     return Promise.reject(error);
   }
 );
