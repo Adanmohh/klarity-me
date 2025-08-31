@@ -8,7 +8,8 @@ from datetime import datetime
 import asyncio
 
 from app.services.supabase_client import supabase_service
-from app.api import deps
+from app.api import deps_simple
+from app.api.deps_simple import SimpleUser
 
 router = APIRouter()
 
@@ -36,14 +37,16 @@ class CardUpdate(BaseModel):
     status: Optional[str] = None
 
 @router.get("/", response_model=List[Card])
-async def get_cards() -> Any:
+async def get_cards(
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple)
+) -> Any:
     """Get all cards for the current user"""
-    # For now, use a test user ID
-    test_user = await supabase_service.get_user_by_email("test@example.com")
+    # Get or create user in Supabase
+    test_user = await supabase_service.get_user_by_email(current_user.email)
     if not test_user:
         test_user = await supabase_service.create_user(
-            email="test@example.com",
-            full_name="Test User",
+            email=current_user.email,
+            full_name=current_user.full_name or "User",
             is_verified=True
         )
     
@@ -77,9 +80,12 @@ async def get_card(card_id: str) -> Any:
     return result.data[0]
 
 @router.post("/", response_model=Card)
-async def create_card(card_in: CardCreate) -> Any:
+async def create_card(
+    card_in: CardCreate,
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple)
+) -> Any:
     """Create a new card"""
-    test_user = await supabase_service.get_user_by_email("test@example.com")
+    test_user = await supabase_service.get_user_by_email(current_user.email)
     if not test_user:
         raise HTTPException(status_code=401, detail="User not found")
     

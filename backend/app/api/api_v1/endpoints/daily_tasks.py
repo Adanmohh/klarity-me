@@ -4,8 +4,8 @@ from uuid import UUID
 import logging
 from datetime import datetime
 
-from app.api import deps
-from app.models.user import User
+from app.api import deps_simple
+from app.api.deps_simple import SimpleUser
 from app.schemas.daily_task import DailyTask, DailyTaskCreate, DailyTaskUpdate
 from app.models.daily_task import TaskLane
 from app.core.config import settings
@@ -20,7 +20,7 @@ router = APIRouter()
 async def read_daily_tasks(
     skip: int = 0,
     limit: int = 100,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Get all daily tasks for the current user"""
     try:
@@ -37,7 +37,7 @@ async def read_daily_tasks(
 async def create_daily_task(
     *,
     task_in: DailyTaskCreate,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Create a new daily task"""
     try:
@@ -59,7 +59,7 @@ async def create_daily_task(
 async def read_daily_task(
     *,
     task_id: UUID,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Get a specific daily task"""
     try:
@@ -81,7 +81,7 @@ async def update_daily_task(
     *,
     task_id: UUID,
     task_in: DailyTaskUpdate,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Update a daily task"""
     try:
@@ -113,7 +113,7 @@ async def update_daily_task(
 async def delete_daily_task(
     *,
     task_id: UUID,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Delete a daily task"""
     try:
@@ -141,7 +141,7 @@ async def delete_daily_task(
 async def complete_daily_task(
     *,
     task_id: UUID,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Mark a daily task as completed"""
     try:
@@ -166,7 +166,7 @@ async def complete_daily_task(
 async def reopen_daily_task(
     *,
     task_id: UUID,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Reopen a completed daily task"""
     try:
@@ -192,7 +192,7 @@ async def move_to_main(
     *,
     task_id: UUID,
     duration: str = None,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Move a daily task from controller to main lane"""
     try:
@@ -217,7 +217,7 @@ async def move_to_main(
 async def move_to_controller(
     *,
     task_id: UUID,
-    current_user: User = Depends(deps.get_current_active_user),
+    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
 ) -> Any:
     """Move a daily task from main to controller lane"""
     try:
