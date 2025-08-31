@@ -75,7 +75,7 @@ export const OTPAuth: React.FC = () => {
       }
 
       // Store auth data
-      setAuth(data.user, data.access_token);
+      setAuth(data.user, { access_token: data.access_token, token_type: data.token_type });
       
       // Show success message
       setMessage(isNewUser ? 'Account activated successfully!' : 'Logged in successfully!');
