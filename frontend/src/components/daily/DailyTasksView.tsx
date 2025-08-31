@@ -4,33 +4,39 @@ import { TaskDuration, DailyTaskStatus, DailyTaskLane, type DailyTask } from '..
 import { GlassCard } from '../ui/GlassCard';
 import { Button } from '../ui/Button';
 import { Icons } from '../icons/LucideIcons';
-import { dailyTasksAPI } from '../../services/api';
+import { useDailyTaskStore } from '../../store/dailyTaskStore';
 import { cn } from '../../utils/cn';
 
 export const DailyTasksView: React.FC = () => {
-  const [tasks, setTasks] = useState<DailyTask[]>([]);
+  // Zustand store state and actions
+  const {
+    tasks,
+    loading,
+    error,
+    isOnline,
+    lastSync,
+    fetchTasks,
+    createTask,
+    updateTask,
+    deleteTask,
+    completeTask,
+    reopenTask,
+    moveToMain,
+    moveToController,
+    clearError
+  } = useDailyTaskStore();
+
+  // Local form state
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [selectedDuration, setSelectedDuration] = useState<TaskDuration>(TaskDuration.FIFTEEN_MIN);
   const [showAddForm, setShowAddForm] = useState(false);
-  const [loading, setLoading] = useState(true);
   const [selectedLane, setSelectedLane] = useState<DailyTaskLane>(DailyTaskLane.CONTROLLER);
 
+  // Load tasks on component mount
   useEffect(() => {
-    loadTasks();
-  }, []);
-
-  const loadTasks = async () => {
-    setLoading(true);
-    try {
-      const fetchedTasks = await dailyTasksAPI.getAllTasks();
-      setTasks(fetchedTasks);
-    } catch (error) {
-      console.error('Failed to load daily tasks:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+    fetchTasks();
+  }, [fetchTasks]);
 
   // Separate tasks by lane
   const controllerTasks = tasks.filter(task => task.lane === DailyTaskLane.CONTROLLER);
@@ -44,81 +50,51 @@ export const DailyTasksView: React.FC = () => {
     'No Duration': mainTasks.filter(task => !task.duration),
   };
 
+  // Action handlers using the store
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
 
-    try {
-      const newTask = await dailyTasksAPI.createTask({
-        title: newTaskTitle.trim(),
-        description: newTaskDescription.trim() || undefined,
-        lane: selectedLane,
-        duration: selectedLane === DailyTaskLane.MAIN ? selectedDuration : undefined,
-        status: DailyTaskStatus.PENDING,
-        position: tasks.filter(t => t.lane === selectedLane).length,
-      });
-      
-      setTasks([...tasks, newTask]);
+    await createTask({
+      title: newTaskTitle.trim(),
+      description: newTaskDescription.trim() || undefined,
+      lane: selectedLane,
+      duration: selectedLane === DailyTaskLane.MAIN ? selectedDuration : undefined,
+    });
+
+    // Clear form on success (error handling is done in store)
+    if (!error) {
       setNewTaskTitle('');
       setNewTaskDescription('');
       setShowAddForm(false);
-    } catch (error) {
-      console.error('Failed to create task:', error);
     }
   };
 
   const handleMoveToMain = async (taskId: string, duration?: TaskDuration) => {
-    try {
-      const updatedTask = await dailyTasksAPI.moveToMain(taskId, duration);
-      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
-    } catch (error) {
-      console.error('Failed to move task to main:', error);
-    }
+    await moveToMain(taskId, duration);
   };
 
   const handleMoveToController = async (taskId: string) => {
-    try {
-      const updatedTask = await dailyTasksAPI.moveToController(taskId);
-      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
-    } catch (error) {
-      console.error('Failed to move task to controller:', error);
-    }
+    await moveToController(taskId);
   };
 
   const handleToggleComplete = async (taskId: string) => {
     const task = tasks.find(t => t.id === taskId);
     if (!task) return;
 
-    try {
-      let updatedTask: DailyTask;
-      if (task.status === DailyTaskStatus.COMPLETED) {
-        updatedTask = await dailyTasksAPI.reopenTask(taskId);
-      } else {
-        updatedTask = await dailyTasksAPI.completeTask(taskId);
-      }
-      
-      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
-    } catch (error) {
-      console.error('Failed to toggle task completion:', error);
+    if (task.status === DailyTaskStatus.COMPLETED) {
+      await reopenTask(taskId);
+    } else {
+      await completeTask(taskId);
     }
   };
 
   const handleDeleteTask = async (taskId: string) => {
-    try {
-      await dailyTasksAPI.deleteTask(taskId);
-      setTasks(tasks.filter(t => t.id !== taskId));
-    } catch (error) {
-      console.error('Failed to delete task:', error);
-    }
+    await deleteTask(taskId);
   };
 
   const handleUpdateTask = async (taskId: string, updates: Partial<DailyTask>) => {
-    try {
-      const updatedTask = await dailyTasksAPI.updateTask(taskId, updates);
-      setTasks(tasks.map(t => t.id === taskId ? updatedTask : t));
-    } catch (error) {
-      console.error('Failed to update task:', error);
-    }
+    await updateTask(taskId, updates);
   };
 
   const TaskItem: React.FC<{ task: DailyTask; showMoveButton?: boolean }> = ({ task, showMoveButton = false }) => {
@@ -186,22 +162,40 @@ export const DailyTasksView: React.FC = () => {
             </div>
           ) : (
             <div className="flex-1">
-              <div className={cn(
-                "font-medium",
-                task.status === DailyTaskStatus.COMPLETED && "line-through"
-              )}>
-                {task.title}
+              <div className="flex items-center gap-2">
+                <div className={cn(
+                  "font-medium",
+                  task.status === DailyTaskStatus.COMPLETED && "line-through"
+                )}>
+                  {task.title}
+                </div>
+                {/* Local task indicator */}
+                {task.id.startsWith('local-') && (
+                  <span 
+                    className="px-2 py-0.5 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 text-xs rounded-full"
+                    title="Created offline - will sync when connection is restored"
+                  >
+                    Local
+                  </span>
+                )}
               </div>
               {task.description && (
                 <div className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   {task.description}
                 </div>
               )}
-              {task.duration && (
-                <span className="inline-block mt-2 px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs rounded">
-                  {task.duration}
-                </span>
-              )}
+              <div className="flex items-center gap-2 mt-2">
+                {task.duration && (
+                  <span className="inline-block px-2 py-1 bg-primary-100 dark:bg-primary-900/30 text-primary-700 dark:text-primary-300 text-xs rounded">
+                    {task.duration}
+                  </span>
+                )}
+                {task.completed_at && (
+                  <span className="inline-block px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 text-xs rounded">
+                    Completed at {new Date(task.completed_at).toLocaleTimeString()}
+                  </span>
+                )}
+              </div>
             </div>
           )}
 
@@ -281,12 +275,78 @@ export const DailyTasksView: React.FC = () => {
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
-            Daily Tasks
-          </h1>
-          <p className="text-gray-600 dark:text-gray-400">
-            Manage your daily tasks and miscellaneous to-dos
-          </p>
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                Daily Tasks
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400">
+                Manage your daily tasks and miscellaneous to-dos
+              </p>
+            </div>
+            
+            {/* Connection Status & Sync Info */}
+            <div className="flex items-center gap-4">
+              {/* Online/Offline Status */}
+              <div className={cn(
+                "flex items-center gap-2 px-3 py-1 rounded-full text-xs font-medium",
+                isOnline 
+                  ? "bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300" 
+                  : "bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300"
+              )}>
+                <div className={cn(
+                  "w-2 h-2 rounded-full",
+                  isOnline ? "bg-green-500" : "bg-orange-500"
+                )} />
+                {isOnline ? 'Online' : 'Offline'}
+              </div>
+              
+              {/* Last Sync Time */}
+              {lastSync && (
+                <div className="text-xs text-gray-500 dark:text-gray-400">
+                  Last synced: {new Date(lastSync).toLocaleTimeString()}
+                </div>
+              )}
+              
+              {/* Refresh Button */}
+              <button
+                onClick={() => fetchTasks()}
+                disabled={loading}
+                className="p-2 hover:bg-gray-100 dark:hover:bg-gray-800 rounded-lg transition-colors disabled:opacity-50"
+                title="Refresh tasks"
+              >
+                <Icons.RefreshCw className={cn(
+                  "w-4 h-4 text-gray-500",
+                  loading && "animate-spin"
+                )} />
+              </button>
+            </div>
+          </div>
+
+          {/* Error Display */}
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-red-100 dark:bg-red-900/30 border border-red-300 dark:border-red-700 rounded-lg"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Icons.AlertCircle className="w-4 h-4 text-red-500" />
+                  <span className="text-red-700 dark:text-red-300 text-sm">
+                    {error.message}
+                    {!isOnline && " (Working offline - changes will sync when connection is restored)"}
+                  </span>
+                </div>
+                <button
+                  onClick={clearError}
+                  className="text-red-500 hover:text-red-700 dark:hover:text-red-300"
+                >
+                  <Icons.X className="w-4 h-4" />
+                </button>
+              </div>
+            </motion.div>
+          )}
         </div>
 
         {/* Add Task Form */}

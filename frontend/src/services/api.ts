@@ -210,3 +210,6 @@ export const habitsAPI = {
     return response.data;
   }
 };
+
+// Export the api instance for direct use
+export { api };

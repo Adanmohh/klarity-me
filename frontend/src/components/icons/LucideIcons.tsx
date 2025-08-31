@@ -118,6 +118,7 @@ export const Icons = {
   Target: (props: LucideProps) => <Target size={18} {...props} />,
   Layers: (props: LucideProps) => <Layers size={18} {...props} />,
   Book: (props: LucideProps) => <BookOpen size={18} {...props} />,
+  BookOpen: (props: LucideProps) => <BookOpen size={18} {...props} />,
   Coffee: (props: LucideProps) => <Coffee size={18} {...props} />,
   
   // Status

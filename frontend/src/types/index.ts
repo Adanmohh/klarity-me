@@ -107,3 +107,84 @@ export interface RegisterRequest {
   password: string;
   full_name?: string;
 }
+
+// Habits types
+export enum HabitLane {
+  BECOMING = 'becoming',
+  I_AM = 'i_am'
+}
+
+export interface Habit {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  lane: HabitLane;
+  target_frequency: number; // times per day
+  current_streak: number;
+  best_streak: number;
+  total_completions: number;
+  is_active: boolean;
+  graduation_criteria?: any; // JSON object
+  graduated_at?: string;
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface HabitCheckin {
+  id: string;
+  user_id: string;
+  habit_id: string;
+  checkin_date: string;
+  notes?: string;
+  mood_rating?: number; // 1-5
+  created_at: string;
+}
+
+// Power Statements types
+export interface PowerStatement {
+  id: string;
+  user_id: string;
+  statement: string;
+  category: string;
+  affirmation_count: number;
+  last_affirmed?: string;
+  is_active: boolean;
+  strength_rating: number; // 1-10
+  created_at: string;
+  updated_at?: string;
+}
+
+// Manifestations types
+export interface Manifestation {
+  id: string;
+  user_id: string;
+  title: string;
+  description?: string;
+  visualization_notes?: string;
+  target_date?: string;
+  achieved: boolean;
+  achieved_at?: string;
+  achievement_notes?: string;
+  energy_level: number; // 1-10
+  belief_level: number; // 1-10
+  tags: string[];
+  created_at: string;
+  updated_at?: string;
+}
+
+// Mind Journal types
+export interface MindJournalEntry {
+  id: string;
+  user_id: string;
+  title?: string;
+  content: string;
+  mood?: string;
+  energy_level?: number; // 1-10
+  gratitude_notes?: string;
+  insights?: string;
+  tomorrow_focus?: string;
+  tags: string[];
+  created_at: string;
+  updated_at?: string;
+}

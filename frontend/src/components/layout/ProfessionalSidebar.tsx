@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CommandPalette } from './CommandPalette';
 import { ThemeToggle } from '../ui/ThemeToggle';
 import { Icons } from '../icons/LucideIcons';
+import { UserMenu } from '../auth/UserMenu';
 import { cn } from '../../utils/cn';
 
 interface ProfessionalSidebarProps {
@@ -75,31 +76,31 @@ export const ProfessionalSidebar: React.FC<ProfessionalSidebarProps> = ({
     },
     {
       id: 'identity',
-      title: 'Identity',
+      title: 'Identity Evolution',
       items: [
         {
-          id: 'journal',
-          label: 'Mind Journal',
-          icon: Icons.Dreams,
-          path: '/journal',
-          badge: null,
-          description: 'Capture thoughts & reflections',
+          id: 'identity-evolution',
+          label: 'Daily Practice',
+          icon: Icons.Sparkles,
+          path: '/identity-evolution',
+          badge: 'Main',
+          description: 'Habits, Training & Wisdom',
         },
         {
-          id: 'habits',
-          label: 'Habits',
-          icon: Icons.Target,
-          path: '/habits',
+          id: 'manifestation-journal',
+          label: 'Manifestation Journal',
+          icon: Icons.BookOpen,
+          path: '/manifestation-journal',
           badge: null,
-          description: 'Build new habits',
+          description: 'Track your manifestations',
         },
         {
-          id: 'identity',
-          label: 'Identity Settings',
-          icon: Icons.User,
-          path: '/identity',
+          id: 'power-statements',
+          label: 'Power Statements',
+          icon: Icons.Zap,
+          path: '/power-statements',
           badge: null,
-          description: 'Define who you are',
+          description: 'Your core affirmations',
         },
       ],
     },
@@ -444,6 +445,9 @@ export const ProfessionalSidebar: React.FC<ProfessionalSidebarProps> = ({
                 </div>
               </div>
             )}
+            
+            {/* User Menu */}
+            <UserMenu />
           </div>
         </header>
 

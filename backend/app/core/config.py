@@ -45,6 +45,7 @@ class Settings(BaseSettings):
     # Supabase
     SUPABASE_URL: Optional[str] = None
     SUPABASE_ANON_KEY: Optional[str] = None
+    SUPABASE_SERVICE_KEY: Optional[str] = None
     
     # Development Mode - Enable to use in-memory database
     DEV_MODE: bool = False

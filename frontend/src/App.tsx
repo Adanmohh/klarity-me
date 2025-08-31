@@ -1,13 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, useNavigate, useLocation } from 'react-router-dom';
 import { ThemeProvider } from './contexts/ThemeContext';
+import { AuthProvider } from './contexts/AuthContext';
 import { ProfessionalSidebar } from './components/layout/ProfessionalSidebar';
 import { Dashboard } from './pages/Dashboard';
 import { Archive } from './pages/Archive';
 import { DeepWorkDashboard } from './pages/DeepWorkDashboard';
 import { FocusPage } from './pages/FocusPage';
-import IdentitySettings from './pages/IdentitySettings';
-import Habits from './pages/Habits';
+import IdentityEvolutionCenter from './components/identity/IdentityEvolutionCenter';
+import ManifestationJournal from './components/identity/ManifestationJournal';
+import PowerStatements from './components/identity/PowerStatements';
 import { CardCarousel } from './components/cards/CardCarousel';
 import { DailyTasksView } from './components/daily/DailyTasksView';
 import DailyTasksViewStyled from './components/daily/DailyTasksViewStyled';
@@ -19,6 +21,14 @@ import { useCardStore } from './store/cardStore';
 import { useDailyTaskStore } from './store/dailyTaskStore';
 import { LoadingSpinner } from './components/ui/LoadingSpinner';
 import { Diagnostics } from './components/Diagnostics';
+import { 
+  ForgotPasswordForm, 
+  ResetPasswordForm, 
+  AuthCallback, 
+  ProtectedRoute, 
+  PublicOnlyRoute 
+} from './components/auth';
+import { OTPAuth } from './components/auth/OTPAuth';
 import { Plus, Zap } from 'lucide-react';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { GlobalSearch } from './components/search/GlobalSearch';
@@ -155,27 +165,128 @@ function AppContent() {
         onCloseCommandPalette={() => setIsCommandPaletteOpen(false)}
       >
         <Routes>
-          <Route path="/" element={<FocusPage />} />
-          <Route path="/deep-work-old" element={<DeepWorkDashboard />} />
-          <Route path="/dashboard-old" element={
-            <Dashboard
-              cards={cards}
-              dailyTasksCount={tasks.length}
-              completedToday={5}
-              weeklyStreak={7}
-            />
+          {/* Auth routes - accessible only when NOT authenticated */}
+          <Route path="/auth/login" element={
+            <PublicOnlyRoute>
+              <OTPAuth />
+            </PublicOnlyRoute>
           } />
-          <Route path="/focus" element={<FocusPage />} />
-          <Route path="/card/:id" element={<CardDetailPage />} />
-          <Route path="/daily" element={<DailyTasksViewStyled />} />
-          <Route path="/journal" element={<MindJournalView />} />
-          <Route path="/dream-journal" element={<DreamJournalView />} />
-          <Route path="/analytics" element={<AnalyticsPage />} />
-          <Route path="/archive" element={<Archive />} />
-          <Route path="/identity" element={<IdentitySettings />} />
-          <Route path="/habits" element={<Habits />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/diagnostics" element={<Diagnostics />} />
+          <Route path="/auth/signup" element={
+            <PublicOnlyRoute>
+              <OTPAuth />
+            </PublicOnlyRoute>
+          } />
+          <Route path="/login" element={
+            <PublicOnlyRoute>
+              <OTPAuth />
+            </PublicOnlyRoute>
+          } />
+          <Route path="/signup" element={
+            <PublicOnlyRoute>
+              <OTPAuth />
+            </PublicOnlyRoute>
+          } />
+          <Route path="/register" element={
+            <PublicOnlyRoute>
+              <OTPAuth />
+            </PublicOnlyRoute>
+          } />
+          <Route path="/auth/forgot-password" element={
+            <PublicOnlyRoute>
+              <ForgotPasswordForm />
+            </PublicOnlyRoute>
+          } />
+          <Route path="/auth/reset-password" element={
+            <ResetPasswordForm />
+          } />
+          <Route path="/auth/callback" element={<AuthCallback />} />
+
+          {/* Protected routes - accessible only when authenticated */}
+          <Route path="/" element={
+            <ProtectedRoute>
+              <FocusPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard" element={
+            <ProtectedRoute>
+              <FocusPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/deep-work-old" element={
+            <ProtectedRoute>
+              <DeepWorkDashboard />
+            </ProtectedRoute>
+          } />
+          <Route path="/dashboard-old" element={
+            <ProtectedRoute>
+              <Dashboard
+                cards={cards}
+                dailyTasksCount={tasks.length}
+                completedToday={5}
+                weeklyStreak={7}
+              />
+            </ProtectedRoute>
+          } />
+          <Route path="/focus" element={
+            <ProtectedRoute>
+              <FocusPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/card/:id" element={
+            <ProtectedRoute>
+              <CardDetailPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/daily" element={
+            <ProtectedRoute>
+              <DailyTasksViewStyled />
+            </ProtectedRoute>
+          } />
+          <Route path="/journal" element={
+            <ProtectedRoute>
+              <MindJournalView />
+            </ProtectedRoute>
+          } />
+          <Route path="/dream-journal" element={
+            <ProtectedRoute>
+              <DreamJournalView />
+            </ProtectedRoute>
+          } />
+          <Route path="/analytics" element={
+            <ProtectedRoute>
+              <AnalyticsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/archive" element={
+            <ProtectedRoute>
+              <Archive />
+            </ProtectedRoute>
+          } />
+          <Route path="/identity-evolution" element={
+            <ProtectedRoute>
+              <IdentityEvolutionCenter />
+            </ProtectedRoute>
+          } />
+          <Route path="/manifestation-journal" element={
+            <ProtectedRoute>
+              <ManifestationJournal />
+            </ProtectedRoute>
+          } />
+          <Route path="/power-statements" element={
+            <ProtectedRoute>
+              <PowerStatements />
+            </ProtectedRoute>
+          } />
+          <Route path="/settings" element={
+            <ProtectedRoute>
+              <SettingsPage />
+            </ProtectedRoute>
+          } />
+          <Route path="/diagnostics" element={
+            <ProtectedRoute>
+              <Diagnostics />
+            </ProtectedRoute>
+          } />
         </Routes>
       </ProfessionalSidebar>
 
@@ -195,11 +306,13 @@ function AppContent() {
 
 function App() {
   return (
-    <ThemeProvider>
-      <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
-        <AppContent />
-      </Router>
-    </ThemeProvider>
+    <AuthProvider>
+      <ThemeProvider>
+        <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+          <AppContent />
+        </Router>
+      </ThemeProvider>
+    </AuthProvider>
   );
 }
 
