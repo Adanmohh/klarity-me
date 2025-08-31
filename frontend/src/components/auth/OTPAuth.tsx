@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { Mail, ArrowRight, Loader2, CheckCircle, Sparkles } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
-import { authAPI } from '../../services/api';
-import { Button } from '../ui/Button';
 
 export const OTPAuth: React.FC = () => {
   const [step, setStep] = useState<'email' | 'otp'>('email');
@@ -121,52 +119,50 @@ export const OTPAuth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-blue-50 flex items-center justify-center p-6">
-      <div className="absolute inset-0 bg-grid-pattern opacity-5"></div>
-      
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/20 flex items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-md relative z-10"
+        className="w-full max-w-md"
       >
-        <div className="basecamp-card bg-white/95 backdrop-blur-lg shadow-2xl rounded-2xl p-8 border border-gray-100">
+        <div className="bg-white rounded-xl shadow-xl p-8 border-2 border-gray-200">
           <div className="text-center mb-8">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
               transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-primary-gold/20 to-yellow-200/20 mb-4 shadow-lg"
+              className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-indigo-100 mb-4"
             >
               {step === 'email' ? (
-                <Sparkles className="w-10 h-10 text-primary-gold" />
+                <Sparkles className="w-8 h-8 text-indigo-600" />
               ) : (
-                <Mail className="w-10 h-10 text-primary-gold" />
+                <Mail className="w-8 h-8 text-indigo-600" />
               )}
             </motion.div>
             
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary-black to-gray-700 bg-clip-text text-transparent mb-2">
-              {step === 'email' ? 'Welcome to Focus Cards' : 'Verify Your Email'}
+            <h1 className="text-3xl font-bold text-gray-900 mb-2">
+              {step === 'email' ? 'Welcome Back' : 'Verify Your Email'}
             </h1>
-            <p className="text-gray-600 text-sm">
+            <p className="text-gray-600">
               {step === 'email' 
-                ? 'Sign in or create your account with email'
+                ? 'Sign in or create your account'
                 : `We've sent a 6-digit code to ${email}`}
             </p>
           </div>
 
           {/* Email Step */}
           {step === 'email' && (
-            <form onSubmit={handleRequestOTP} className="space-y-6">
+            <form onSubmit={handleRequestOTP} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-gold focus:outline-none transition-all duration-200 bg-white"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors"
                   placeholder="your@email.com"
                   required
                   autoFocus
@@ -174,14 +170,14 @@ export const OTPAuth: React.FC = () => {
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   Full Name <span className="text-gray-400 font-normal">(optional)</span>
                 </label>
                 <input
                   type="text"
                   value={fullName}
                   onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-primary-gold focus:outline-none transition-all duration-200 bg-white"
+                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors"
                   placeholder="John Doe"
                 />
               </div>
@@ -196,32 +192,39 @@ export const OTPAuth: React.FC = () => {
                 </motion.div>
               )}
 
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                className="w-full"
                 disabled={loading || !email}
-                icon={loading ? <Loader2 className="animate-spin" /> : <ArrowRight />}
-                iconPosition="right"
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                {loading ? 'Sending...' : 'Continue with Email'}
-              </Button>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Sending...
+                  </>
+                ) : (
+                  <>
+                    Continue with Email
+                    <ArrowRight className="w-5 h-5" />
+                  </>
+                )}
+              </button>
             </form>
           )}
 
           {/* OTP Step */}
           {step === 'otp' && (
-            <form onSubmit={handleVerifyOTP} className="space-y-6">
+            <form onSubmit={handleVerifyOTP} className="space-y-4">
               <div>
-                <label className="block text-sm font-semibold text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">
                   6-Digit Code
                 </label>
                 <input
                   type="text"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl focus:border-primary-gold focus:outline-none transition-all duration-200 bg-white text-center text-3xl font-bold tracking-[0.5em] text-primary-black"
-                  placeholder="······"
+                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors text-center text-2xl font-bold tracking-[0.3em] text-gray-900"
+                  placeholder="000000"
                   required
                   autoFocus
                   maxLength={6}
@@ -249,22 +252,27 @@ export const OTPAuth: React.FC = () => {
                 </motion.div>
               )}
 
-              <Button
+              <button
                 type="submit"
-                variant="primary"
-                className="w-full"
                 disabled={loading || otp.length !== 6}
-                icon={loading ? <Loader2 className="animate-spin" /> : null}
+                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
               >
-                {loading ? 'Verifying...' : isNewUser ? 'Activate Account' : 'Sign In'}
-              </Button>
+                {loading ? (
+                  <>
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Verifying...
+                  </>
+                ) : (
+                  isNewUser ? 'Activate Account' : 'Sign In'
+                )}
+              </button>
 
               <div className="text-center space-y-2">
                 <button
                   type="button"
                   onClick={handleResendOTP}
                   disabled={countdown > 0 || loading}
-                  className="text-sm text-primary-gold hover:text-yellow-600 disabled:text-gray-400 disabled:cursor-not-allowed"
+                  className="text-sm text-indigo-600 hover:text-indigo-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   {countdown > 0 
                     ? `Resend code in ${countdown}s` 
@@ -279,7 +287,7 @@ export const OTPAuth: React.FC = () => {
                     setError('');
                     setMessage('');
                   }}
-                  className="block w-full text-sm text-gray-600 hover:text-gray-800"
+                  className="block w-full text-sm text-gray-600 hover:text-gray-800 transition-colors"
                 >
                   Use a different email
                 </button>
@@ -293,10 +301,10 @@ export const OTPAuth: React.FC = () => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
-              className="mt-6 p-4 bg-gradient-to-r from-yellow-50 to-amber-50 border border-yellow-200 rounded-xl"
+              className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-lg"
             >
-              <p className="text-xs text-yellow-800 flex items-center gap-2">
-                <span className="inline-block w-2 h-2 bg-yellow-500 rounded-full animate-pulse"></span>
+              <p className="text-xs text-amber-800 flex items-center gap-2">
+                <span className="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
                 <strong>Dev Mode:</strong> Check your backend console for the OTP code
               </p>
             </motion.div>
