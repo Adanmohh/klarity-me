@@ -239,12 +239,12 @@ const HabitTrendChart: React.FC<HabitTrendChartProps> = ({
             <XAxis 
               dataKey="date"
               tick={{ fontSize: 12 }}
-              tickFormatter={(value) => format(new Date(value), viewMode === 'daily' ? 'MM/dd' : 'MMM')}
+              tickFormatter={(value: any) => format(new Date(value), viewMode === 'daily' ? 'MM/dd' : 'MMM')}
             />
             <YAxis 
               tick={{ fontSize: 12 }}
               domain={[0, 100]}
-              tickFormatter={(value) => `${value}%`}
+              tickFormatter={(value: any) => `${value}%`}
             />
             <Tooltip content={<CustomTooltip />} />
             <Legend />
