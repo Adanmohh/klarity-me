@@ -24,11 +24,22 @@ api.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      // Clear auth and redirect to login
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      if (window.location.pathname !== '/auth/login') {
-        window.location.href = '/auth/login';
+      // Only redirect to login if we're not already there and not on public routes
+      const publicPaths = ['/auth/login', '/auth/signup', '/login', '/signup', '/register'];
+      const currentPath = window.location.pathname;
+      
+      if (!publicPaths.includes(currentPath)) {
+        // Check if token exists before clearing
+        const token = localStorage.getItem('token');
+        if (token) {
+          // Token exists but is invalid/expired, clear it
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          window.location.href = '/auth/login';
+        } else {
+          // No token, just redirect
+          window.location.href = '/auth/login';
+        }
       }
     }
     return Promise.reject(error);
