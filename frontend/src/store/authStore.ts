@@ -10,22 +10,29 @@ interface AuthState {
   updateUser: (user: User) => void;
 }
 
+// Check for existing auth on load
+const storedToken = localStorage.getItem('token');
+const storedUser = localStorage.getItem('user');
+
 export const useAuthStore = create<AuthState>((set) => ({
-  user: { id: 'dev-user', email: 'dev@example.com', full_name: 'Dev User', is_active: true, created_at: new Date().toISOString() },
-  token: 'dev-token',
-  isAuthenticated: true, // Always authenticated in dev mode
+  user: storedUser ? JSON.parse(storedUser) : null,
+  token: storedToken,
+  isAuthenticated: !!(storedToken && storedUser),
   
   setAuth: (user, token) => {
     localStorage.setItem('token', token.access_token);
+    localStorage.setItem('user', JSON.stringify(user));
     set({ user, token: token.access_token, isAuthenticated: true });
   },
   
   clearAuth: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('user');
     set({ user: null, token: null, isAuthenticated: false });
   },
   
   updateUser: (user) => {
+    localStorage.setItem('user', JSON.stringify(user));
     set({ user });
   }
 }));
