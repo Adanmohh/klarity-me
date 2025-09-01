@@ -3,11 +3,11 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
-from app.api import deps_simple
+from app.api import deps_supabase
 from app.crud.focus_task import focus_task_crud
 from app.crud.card import card_crud
 from app.db.session import get_db
-from app.api.deps_simple import SimpleUser
+from app.api.deps_supabase import SupabaseUser
 from app.schemas.focus_task import FocusTask, FocusTaskCreate, FocusTaskUpdate
 from app.core.config import settings
 from app.services.database import db_service
@@ -25,7 +25,7 @@ router = APIRouter()
 async def read_all_focus_tasks(
     *,
     db: AsyncSession = Depends(get_db),
-    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
 ) -> Any:
     """Get all focus tasks for the current user"""
     if settings.DEV_MODE:
@@ -43,7 +43,7 @@ async def read_focus_tasks_by_card(
     *,
     db: AsyncSession = Depends(get_db),
     card_id: UUID,
-    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Check card ownership in dev mode
@@ -66,7 +66,7 @@ async def create_focus_task(
     *,
     db: AsyncSession = Depends(get_db),
     task_in: FocusTaskCreate,
-    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Check card ownership in dev mode
@@ -88,7 +88,7 @@ async def update_focus_task(
     db: AsyncSession = Depends(get_db),
     task_id: UUID,
     task_in: FocusTaskUpdate,
-    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Mock implementation for dev mode
@@ -122,7 +122,7 @@ async def delete_focus_task(
     *,
     db: AsyncSession = Depends(get_db),
     task_id: UUID,
-    current_user: SimpleUser = Depends(deps_simple.get_current_active_user_simple),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Mock implementation for dev mode

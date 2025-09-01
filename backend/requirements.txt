@@ -11,6 +11,7 @@ python-dotenv==1.0.0
 pytest==7.4.3
 pytest-asyncio==0.21.1
 httpx==0.25.2
+supabase==2.3.4
 
 # RAG and LLM dependencies
 llama-index==0.10.0

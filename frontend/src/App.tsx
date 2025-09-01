@@ -47,7 +47,12 @@ function AppContent() {
 
   const { cards, fetchCards, createCard } = useCardStore();
   const { tasks } = useDailyTaskStore();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, initializeAuth } = useAuthStore();
+
+  // Initialize auth on mount
+  useEffect(() => {
+    initializeAuth();
+  }, [initializeAuth]);
 
   useEffect(() => {
     // Load initial data

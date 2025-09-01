@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Mail, ArrowRight, Loader2, CheckCircle, Sparkles } from 'lucide-react';
+import { Mail, ArrowRight, Loader2, CheckCircle, Sparkles, Key } from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
+import { authApi } from '../../services/authApi';
 
 export const OTPAuth: React.FC = () => {
-  const [step, setStep] = useState<'email' | 'otp'>('email');
+  const [authMode, setAuthMode] = useState<'otp' | 'password'>('otp');
+  const [step, setStep] = useState<'email' | 'verify'>('email');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
   const [otp, setOtp] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [message, setMessage] = useState('');
-  const [isNewUser, setIsNewUser] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
   const [countdown, setCountdown] = useState(0);
   
   const { setAuth } = useAuthStore();
@@ -26,6 +30,51 @@ export const OTPAuth: React.FC = () => {
     }
   }, [countdown]);
 
+  const handlePasswordAuth = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setMessage('');
+
+    try {
+      if (isSignUp) {
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        
+        const data = await authApi.signUpWithEmail(email, password, fullName);
+        
+        if (data.access_token) {
+          setAuth(data.user, { 
+            access_token: data.access_token, 
+            token_type: data.token_type || 'bearer' 
+          }, data.refresh_token);
+          
+          setMessage('Account created successfully!');
+          setTimeout(() => navigate('/'), 1500);
+        } else {
+          setMessage('Please check your email to confirm your account');
+        }
+      } else {
+        const data = await authApi.signInWithEmail(email, password);
+        
+        if (data.access_token) {
+          setAuth(data.user, { 
+            access_token: data.access_token, 
+            token_type: data.token_type || 'bearer' 
+          }, data.refresh_token);
+          
+          setMessage('Logged in successfully!');
+          setTimeout(() => navigate('/'), 1500);
+        }
+      }
+    } catch (err: any) {
+      setError(err.response?.data?.detail || err.message || 'Authentication failed');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleRequestOTP = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -33,24 +82,12 @@ export const OTPAuth: React.FC = () => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/request-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, full_name: fullName })
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Failed to send OTP');
-      }
-
-      setMessage(data.message);
-      setIsNewUser(data.is_new_user);
-      setStep('otp');
-      setCountdown(60); // 60 seconds before allowing resend
+      const data = await authApi.requestOtp(email);
+      setMessage(data.message || `We've sent a 6-digit code to ${email}`);
+      setStep('verify');
+      setCountdown(60);
     } catch (err: any) {
-      setError(err.message || 'Failed to send OTP');
+      setError(err.response?.data?.detail || err.message || 'Failed to send OTP');
     } finally {
       setLoading(false);
     }
@@ -62,28 +99,19 @@ export const OTPAuth: React.FC = () => {
     setError('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/verify-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, otp })
-      });
-
-      const data = await response.json();
+      const data = await authApi.verifyOtp(email, otp);
       
-      if (!response.ok) {
-        throw new Error(data.detail || 'Failed to verify OTP');
+      if (data.access_token) {
+        setAuth(data.user, { 
+          access_token: data.access_token, 
+          token_type: data.token_type || 'bearer' 
+        }, data.refresh_token);
+        
+        setMessage('Logged in successfully!');
+        setTimeout(() => navigate('/'), 1500);
       }
-
-      // Store auth data
-      setAuth(data.user, { access_token: data.access_token, token_type: data.token_type });
-      
-      // Show success message
-      setMessage(isNewUser ? 'Account activated successfully!' : 'Logged in successfully!');
-      
-      // Navigate to home after a short delay
-      setTimeout(() => navigate('/'), 1500);
     } catch (err: any) {
-      setError(err.message || 'Invalid or expired code');
+      setError(err.response?.data?.detail || err.message || 'Invalid or expired code');
     } finally {
       setLoading(false);
     }
@@ -97,220 +125,340 @@ export const OTPAuth: React.FC = () => {
     setMessage('');
 
     try {
-      const response = await fetch('http://localhost:8000/api/v1/auth/resend-otp', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email })
-      });
-
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Failed to resend OTP');
-      }
-
-      setMessage(data.message);
+      const data = await authApi.requestOtp(email);
+      setMessage('New code sent to your email');
       setCountdown(60);
     } catch (err: any) {
-      setError(err.message || 'Failed to resend OTP');
+      setError(err.response?.data?.detail || err.message || 'Failed to resend OTP');
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-indigo-50/20 flex items-center justify-center p-6">
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center px-4"
+    >
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
+        initial={{ scale: 0.95, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        transition={{ delay: 0.1 }}
         className="w-full max-w-md"
       >
-        <div className="bg-white rounded-xl shadow-xl p-8 border-2 border-gray-200">
+        <div className="bg-white rounded-2xl shadow-xl p-8">
+          {/* Header */}
           <div className="text-center mb-8">
             <motion.div
               initial={{ scale: 0 }}
               animate={{ scale: 1 }}
-              transition={{ type: "spring", stiffness: 260, damping: 20 }}
-              className="inline-flex items-center justify-center w-16 h-16 rounded-xl bg-indigo-100 mb-4"
+              transition={{ type: "spring", stiffness: 500, delay: 0.2 }}
+              className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl mb-4"
             >
-              {step === 'email' ? (
-                <Sparkles className="w-8 h-8 text-indigo-600" />
-              ) : (
-                <Mail className="w-8 h-8 text-indigo-600" />
-              )}
+              <Sparkles className="w-8 h-8 text-white" />
             </motion.div>
-            
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">
-              {step === 'email' ? 'Welcome Back' : 'Verify Your Email'}
-            </h1>
-            <p className="text-gray-600">
-              {step === 'email' 
-                ? 'Sign in or create your account'
-                : `We've sent a 6-digit code to ${email}`}
+            <h2 className="text-3xl font-bold text-gray-900">Welcome</h2>
+            <p className="text-gray-600 mt-2">
+              {authMode === 'otp' 
+                ? 'Sign in with a magic link'
+                : (isSignUp ? 'Create your account' : 'Sign in to your account')
+              }
             </p>
           </div>
 
-          {/* Email Step */}
-          {step === 'email' && (
-            <form onSubmit={handleRequestOTP} className="space-y-4">
+          {/* Auth Mode Toggle */}
+          <div className="flex rounded-lg bg-gray-100 p-1 mb-6">
+            <button
+              onClick={() => {
+                setAuthMode('otp');
+                setStep('email');
+                setError('');
+                setMessage('');
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-all ${
+                authMode === 'otp'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Mail className="w-4 h-4" />
+              Magic Link
+            </button>
+            <button
+              onClick={() => {
+                setAuthMode('password');
+                setError('');
+                setMessage('');
+              }}
+              className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-md transition-all ${
+                authMode === 'password'
+                  ? 'bg-white text-indigo-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-900'
+              }`}
+            >
+              <Key className="w-4 h-4" />
+              Password
+            </button>
+          </div>
+
+          {/* Messages */}
+          {message && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg flex items-center gap-2"
+            >
+              <CheckCircle className="w-5 h-5 text-green-600" />
+              <span className="text-green-800">{message}</span>
+            </motion.div>
+          )}
+          
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-800"
+            >
+              {error}
+            </motion.div>
+          )}
+
+          {/* OTP Authentication */}
+          {authMode === 'otp' && (
+            <>
+              {step === 'email' ? (
+                <form onSubmit={handleRequestOTP} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                        placeholder="Enter your email"
+                        required
+                        disabled={loading}
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Full Name (optional)
+                    </label>
+                    <input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      placeholder="Enter your name"
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={loading}
+                    className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Sending Code...
+                      </>
+                    ) : (
+                      <>
+                        Continue
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </motion.button>
+                </form>
+              ) : (
+                <form onSubmit={handleVerifyOTP} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      6-Digit Code
+                    </label>
+                    <input
+                      type="text"
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                      className="w-full px-4 py-3 text-center text-2xl font-mono border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                      placeholder="000000"
+                      maxLength={6}
+                      required
+                      disabled={loading}
+                    />
+                  </div>
+
+                  <motion.button
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    type="submit"
+                    disabled={loading || otp.length !== 6}
+                    className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="w-5 h-5 animate-spin" />
+                        Verifying...
+                      </>
+                    ) : (
+                      <>
+                        Verify & Continue
+                        <ArrowRight className="w-5 h-5" />
+                      </>
+                    )}
+                  </motion.button>
+
+                  <div className="flex items-center justify-between text-sm">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setStep('email');
+                        setOtp('');
+                        setError('');
+                      }}
+                      className="text-indigo-600 hover:text-indigo-700"
+                    >
+                      Change email
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleResendOTP}
+                      disabled={countdown > 0 || loading}
+                      className={`${
+                        countdown > 0
+                          ? 'text-gray-400 cursor-not-allowed'
+                          : 'text-indigo-600 hover:text-indigo-700'
+                      }`}
+                    >
+                      {countdown > 0 ? `Resend in ${countdown}s` : 'Resend code'}
+                    </button>
+                  </div>
+                </form>
+              )}
+            </>
+          )}
+
+          {/* Password Authentication */}
+          {authMode === 'password' && (
+            <form onSubmit={handlePasswordAuth} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
                   Email Address
                 </label>
                 <input
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors"
-                  placeholder="your@email.com"
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  placeholder="Enter your email"
                   required
-                  autoFocus
+                  disabled={loading}
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name <span className="text-gray-400 font-normal">(optional)</span>
-                </label>
-                <input
-                  type="text"
-                  value={fullName}
-                  onChange={(e) => setFullName(e.target.value)}
-                  className="w-full px-4 py-2 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors"
-                  placeholder="John Doe"
-                />
-              </div>
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-red-600 text-sm text-center"
-                >
-                  {error}
-                </motion.div>
+              {isSignUp && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Full Name
+                  </label>
+                  <input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    placeholder="Enter your name"
+                    required
+                    disabled={loading}
+                  />
+                </div>
               )}
 
-              <button
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                  placeholder="Enter your password"
+                  required
+                  disabled={loading}
+                  minLength={6}
+                />
+              </div>
+
+              {isSignUp && (
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Confirm Password
+                  </label>
+                  <input
+                    type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+                    placeholder="Confirm your password"
+                    required
+                    disabled={loading}
+                    minLength={6}
+                  />
+                </div>
+              )}
+
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 type="submit"
-                disabled={loading || !email}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                disabled={loading}
+                className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:from-indigo-600 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {loading ? (
                   <>
                     <Loader2 className="w-5 h-5 animate-spin" />
-                    Sending...
+                    {isSignUp ? 'Creating Account...' : 'Signing In...'}
                   </>
                 ) : (
                   <>
-                    Continue with Email
+                    {isSignUp ? 'Create Account' : 'Sign In'}
                     <ArrowRight className="w-5 h-5" />
                   </>
                 )}
-              </button>
-            </form>
-          )}
+              </motion.button>
 
-          {/* OTP Step */}
-          {step === 'otp' && (
-            <form onSubmit={handleVerifyOTP} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  6-Digit Code
-                </label>
-                <input
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-lg focus:border-indigo-500 focus:outline-none transition-colors text-center text-2xl font-bold tracking-[0.3em] text-gray-900"
-                  placeholder="000000"
-                  required
-                  autoFocus
-                  maxLength={6}
-                />
-              </div>
-
-              {message && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex items-center gap-2 text-green-600 text-sm"
-                >
-                  <CheckCircle className="w-4 h-4" />
-                  {message}
-                </motion.div>
-              )}
-
-              {error && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="text-red-600 text-sm text-center"
-                >
-                  {error}
-                </motion.div>
-              )}
-
-              <button
-                type="submit"
-                disabled={loading || otp.length !== 6}
-                className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-indigo-600 text-white font-medium rounded-xl hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    Verifying...
-                  </>
-                ) : (
-                  isNewUser ? 'Activate Account' : 'Sign In'
-                )}
-              </button>
-
-              <div className="text-center space-y-2">
-                <button
-                  type="button"
-                  onClick={handleResendOTP}
-                  disabled={countdown > 0 || loading}
-                  className="text-sm text-indigo-600 hover:text-indigo-700 disabled:text-gray-400 disabled:cursor-not-allowed transition-colors"
-                >
-                  {countdown > 0 
-                    ? `Resend code in ${countdown}s` 
-                    : 'Resend code'}
-                </button>
-                
+              <div className="text-center">
                 <button
                   type="button"
                   onClick={() => {
-                    setStep('email');
-                    setOtp('');
+                    setIsSignUp(!isSignUp);
                     setError('');
-                    setMessage('');
+                    setPassword('');
+                    setConfirmPassword('');
                   }}
-                  className="block w-full text-sm text-gray-600 hover:text-gray-800 transition-colors"
+                  className="text-sm text-indigo-600 hover:text-indigo-700"
                 >
-                  Use a different email
+                  {isSignUp
+                    ? 'Already have an account? Sign in'
+                    : "Don't have an account? Sign up"
+                  }
                 </button>
               </div>
             </form>
           )}
-
-          {/* Development Mode Notice */}
-          {step === 'otp' && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="mt-6 p-3 bg-amber-50 border border-amber-200 rounded-lg"
-            >
-              <p className="text-xs text-amber-800 flex items-center gap-2">
-                <span className="inline-block w-2 h-2 bg-amber-500 rounded-full animate-pulse"></span>
-                <strong>Dev Mode:</strong> Check your backend console for the OTP code
-              </p>
-            </motion.div>
-          )}
         </div>
       </motion.div>
-    </div>
+    </motion.div>
   );
 };
