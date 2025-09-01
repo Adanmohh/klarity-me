@@ -1,17 +1,17 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
-import { User, Session, AuthError } from '@supabase/supabase-js'
-import { supabase } from '../services/supabase'
+import React, { createContext, useContext, useEffect } from 'react'
+import { useAuthStore } from '../store/authStore'
+import { authApi } from '../services/authApi'
 
 interface AuthContextType {
-  user: User | null
-  session: Session | null
+  user: any | null
+  session: any | null
   loading: boolean
-  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: AuthError | null }>
-  signIn: (email: string, password: string) => Promise<{ error: AuthError | null }>
-  signOut: () => Promise<{ error: AuthError | null }>
-  signInWithProvider: (provider: 'google' | 'github') => Promise<{ error: AuthError | null }>
-  resetPassword: (email: string) => Promise<{ error: AuthError | null }>
-  updatePassword: (password: string) => Promise<{ error: AuthError | null }>
+  signUp: (email: string, password: string, metadata?: any) => Promise<{ error: any | null }>
+  signIn: (email: string, password: string) => Promise<{ error: any | null }>
+  signOut: () => Promise<{ error: any | null }>
+  signInWithProvider: (provider: 'google' | 'github') => Promise<{ error: any | null }>
+  resetPassword: (email: string) => Promise<{ error: any | null }>
+  updatePassword: (password: string) => Promise<{ error: any | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -29,87 +29,89 @@ interface AuthProviderProps {
 }
 
 export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null)
-  const [session, setSession] = useState<Session | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { 
+    user, 
+    token, 
+    isLoading: loading, 
+    setAuth, 
+    clearAuth, 
+    initializeAuth 
+  } = useAuthStore()
 
   useEffect(() => {
-    // Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-    })
-
-    // Listen for auth changes
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log('Auth state change:', event, session)
-      setSession(session)
-      setUser(session?.user ?? null)
-      setLoading(false)
-
-      // Handle token refresh
-      if (event === 'TOKEN_REFRESHED') {
-        console.log('Token refreshed successfully')
-      }
-    })
-
-    return () => subscription.unsubscribe()
-  }, [])
+    // Initialize auth on mount
+    initializeAuth()
+  }, [initializeAuth])
 
   const signUp = async (email: string, password: string, metadata?: any) => {
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: metadata || {}
+    try {
+      const response = await authApi.signUpWithEmail(
+        email, 
+        password, 
+        metadata?.full_name || ''
+      )
+      
+      if (response.access_token) {
+        setAuth(
+          response.user, 
+          { access_token: response.access_token, token_type: 'bearer' },
+          response.refresh_token
+        )
+        return { error: null }
       }
-    })
-    return { error }
+      
+      return { error: { message: 'Signup failed' } }
+    } catch (error: any) {
+      return { error: { message: error.response?.data?.detail || error.message } }
+    }
   }
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    })
-    return { error }
+    try {
+      const response = await authApi.signInWithEmail(email, password)
+      
+      if (response.access_token) {
+        setAuth(
+          response.user, 
+          { access_token: response.access_token, token_type: 'bearer' },
+          response.refresh_token
+        )
+        return { error: null }
+      }
+      
+      return { error: { message: 'Login failed' } }
+    } catch (error: any) {
+      return { error: { message: error.response?.data?.detail || error.message } }
+    }
   }
 
   const signOut = async () => {
-    const { error } = await supabase.auth.signOut()
-    return { error }
+    try {
+      await clearAuth()
+      return { error: null }
+    } catch (error: any) {
+      return { error: { message: error.message } }
+    }
   }
 
   const signInWithProvider = async (provider: 'google' | 'github') => {
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${window.location.origin}/auth/callback`
-      }
-    })
-    return { error }
+    // OAuth providers would need to be implemented through backend
+    return { error: { message: 'OAuth providers not yet implemented' } }
   }
 
   const resetPassword = async (email: string) => {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/auth/reset-password`
-    })
-    return { error }
+    // Password reset would need to be implemented through backend
+    return { error: { message: 'Password reset not yet implemented' } }
   }
 
   const updatePassword = async (password: string) => {
-    const { error } = await supabase.auth.updateUser({
-      password
-    })
-    return { error }
+    // Password update would need to be implemented through backend
+    return { error: { message: 'Password update not yet implemented' } }
   }
 
   const value: AuthContextType = {
     user,
-    session,
+    session: token ? { access_token: token } : null,
     loading,
     signUp,
     signIn,

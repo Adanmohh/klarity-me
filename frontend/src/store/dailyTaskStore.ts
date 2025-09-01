@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
 import { DailyTask, DailyTaskLane, DailyTaskStatus, TaskDuration } from '../types';
-import { supabase } from '../services/supabase';
+import { api } from '../services/api';
 
 // Types for API responses and errors
 interface ApiError {

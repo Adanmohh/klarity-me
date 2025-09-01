@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { Manifestation } from '../types';
-import { supabase } from '../services/supabase';
+import { api } from '../services/api';
 
 interface ManifestationsStore {
   manifestations: Manifestation[];

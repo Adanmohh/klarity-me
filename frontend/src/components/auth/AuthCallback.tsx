@@ -1,22 +1,22 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { supabase } from '../../services/supabase'
+import { useAuthStore } from '../../store/authStore'
 
 export const AuthCallback: React.FC = () => {
   const navigate = useNavigate()
+  const { initializeAuth } = useAuthStore()
 
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        const { data, error } = await supabase.auth.getSession()
+        // Initialize auth to check for existing session
+        await initializeAuth()
         
-        if (error) {
-          console.error('Auth callback error:', error)
-          navigate('/auth/login?error=callback_failed')
-          return
-        }
-
-        if (data.session) {
+        // The auth store will handle the session check
+        // If authenticated, it will set the user
+        const { isAuthenticated } = useAuthStore.getState()
+        
+        if (isAuthenticated) {
           // Successfully authenticated, redirect to dashboard
           navigate('/dashboard')
         } else {
@@ -30,7 +30,7 @@ export const AuthCallback: React.FC = () => {
     }
 
     handleAuthCallback()
-  }, [navigate])
+  }, [navigate, initializeAuth])
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50">

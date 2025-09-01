@@ -1,4 +1,5 @@
-import { supabase } from '../services/supabase';
+// TODO: Implement data migration through backend API
+// import { api } from '../services/api';
 import { 
   Card, 
   DailyTask, 

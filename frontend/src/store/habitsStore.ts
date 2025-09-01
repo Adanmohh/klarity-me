@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import { devtools } from 'zustand/middleware';
 import { Habit, HabitCheckin, HabitLane } from '../types';
-import { supabase } from '../services/supabase';
+import { api } from '../services/api';
 
 interface HabitsStore {
   habits: Habit[];

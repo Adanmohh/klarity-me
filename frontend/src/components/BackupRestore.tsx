@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { supabaseService } from '../services/supabase';
-import { DataMigrationService } from '../utils/dataMigration';
+// TODO: Implement backup/restore through backend API
+// import { supabaseService } from '../services/supabase';
+// import { DataMigrationService } from '../utils/dataMigration';
 
 interface BackupRestoreProps {
   className?: string;
