@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { AuthToken, LoginRequest, RegisterRequest, User, Card, CardWithTasks, FocusTask, DailyTask } from '../types';
 
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000/api/v1';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8001/api/v1';
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -12,7 +12,8 @@ const api = axios.create({
 
 // Add auth token to requests
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('token');
+  // Check for both 'token' and 'access_token' for compatibility
+  const token = localStorage.getItem('access_token') || localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }
@@ -30,9 +31,11 @@ api.interceptors.response.use(
       
       if (!publicPaths.includes(currentPath)) {
         // Check if token exists before clearing
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('access_token') || localStorage.getItem('token');
         if (token) {
           // Token exists but is invalid/expired, clear it
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
           localStorage.removeItem('token');
           localStorage.removeItem('user');
           window.location.href = '/auth/login';

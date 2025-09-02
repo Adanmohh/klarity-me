@@ -6,7 +6,7 @@ from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
     API_V1_STR: str = "/api/v1"
-    SECRET_KEY: str = secrets.token_urlsafe(32)
+    SECRET_KEY: str = "F788C73VV6E45cm29KDmtDu_Q7yXROsKWGjoqEbIXXQ"  # Must match the key used to create tokens
     PROJECT_NAME: str = "Focus Cards"
     VERSION: str = "1.0.0"
     
@@ -47,8 +47,12 @@ class Settings(BaseSettings):
     SUPABASE_ANON_KEY: Optional[str] = None
     SUPABASE_SERVICE_KEY: Optional[str] = None
     
+    # Email Settings (Resend)
+    RESEND_API_KEY: Optional[str] = None
+    EMAIL_FROM: Optional[str] = "noreply@yourdomain.com"
+    
     # Development Mode - Enable to use in-memory database
-    DEV_MODE: bool = False
+    DEV_MODE: bool = True
 
     class Config:
         case_sensitive = True

@@ -1,5 +1,5 @@
 // TODO: Implement data migration through backend API
-// import { api } from '../services/api';
+import { api } from '../services/api';
 import { 
   Card, 
   DailyTask, 
@@ -169,8 +169,8 @@ export class DataMigrationService {
     }
   }
 
-  // Migrate all data from localStorage to Supabase
-  static async migrateToSupabase(): Promise<MigrationResult> {
+  // Migrate all data from localStorage to backend
+  static async migrateToBackend(): Promise<MigrationResult> {
     const result: MigrationResult = {
       success: false,
       message: '',
@@ -187,8 +187,8 @@ export class DataMigrationService {
 
     try {
       // Check if user is authenticated
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      const token = localStorage.getItem('token');
+      if (!token) {
         result.message = 'User must be authenticated to migrate data';
         return result;
       }
@@ -200,188 +200,12 @@ export class DataMigrationService {
         return result;
       }
 
-      // Migrate cards
-      if (backup.data.cards && backup.data.cards.length > 0) {
-        try {
-          const cardsToMigrate = backup.data.cards
-            .filter(card => !card.id.startsWith('temp-') && !card.id.startsWith('local-'))
-            .map(card => ({
-              title: card.title,
-              description: card.description,
-              position: card.position,
-              status: card.status,
-              pause_until: card.pause_until,
-              last_worked_on: card.last_worked_on,
-              sessions_count: card.sessions_count || 0,
-              where_left_off: card.where_left_off,
-              momentum_score: card.momentum_score || 0
-            }));
-
-          if (cardsToMigrate.length > 0) {
-            const { data, error } = await supabase
-              .from('cards')
-              .insert(cardsToMigrate);
-
-            if (error) {
-              result.errors.push(`Cards migration error: ${error.message}`);
-            } else {
-              result.migratedCounts.cards = cardsToMigrate.length;
-            }
-          }
-        } catch (error: any) {
-          result.errors.push(`Cards migration failed: ${error.message}`);
-        }
-      }
-
-      // Migrate daily tasks
-      if (backup.data.dailyTasks && backup.data.dailyTasks.length > 0) {
-        try {
-          const tasksToMigrate = backup.data.dailyTasks
-            .filter(task => !task.id.startsWith('temp-') && !task.id.startsWith('local-'))
-            .map(task => ({
-              title: task.title,
-              description: task.description,
-              lane: task.lane,
-              duration: task.duration,
-              status: task.status,
-              position: task.position,
-              completed_at: task.completed_at
-            }));
-
-          if (tasksToMigrate.length > 0) {
-            const { data, error } = await supabase
-              .from('daily_tasks')
-              .insert(tasksToMigrate);
-
-            if (error) {
-              result.errors.push(`Daily tasks migration error: ${error.message}`);
-            } else {
-              result.migratedCounts.dailyTasks = tasksToMigrate.length;
-            }
-          }
-        } catch (error: any) {
-          result.errors.push(`Daily tasks migration failed: ${error.message}`);
-        }
-      }
-
-      // Migrate habits
-      if (backup.data.habits && backup.data.habits.length > 0) {
-        try {
-          const habitsToMigrate = backup.data.habits
-            .filter(habit => !habit.id.startsWith('temp-'))
-            .map(habit => ({
-              title: habit.title,
-              description: habit.description,
-              lane: habit.lane,
-              target_frequency: habit.target_frequency || 1,
-              current_streak: habit.current_streak || 0,
-              best_streak: habit.best_streak || 0,
-              total_completions: habit.total_completions || 0,
-              is_active: habit.is_active,
-              graduation_criteria: habit.graduation_criteria,
-              graduated_at: habit.graduated_at
-            }));
-
-          if (habitsToMigrate.length > 0) {
-            const { data, error } = await supabase
-              .from('habits')
-              .insert(habitsToMigrate);
-
-            if (error) {
-              result.errors.push(`Habits migration error: ${error.message}`);
-            } else {
-              result.migratedCounts.habits = habitsToMigrate.length;
-            }
-          }
-        } catch (error: any) {
-          result.errors.push(`Habits migration failed: ${error.message}`);
-        }
-      }
-
-      // Migrate power statements
-      if (backup.data.powerStatements && backup.data.powerStatements.length > 0) {
-        try {
-          const statementsToMigrate = backup.data.powerStatements
-            .filter(statement => !statement.id.startsWith('temp-'))
-            .map(statement => ({
-              statement: statement.statement,
-              category: statement.category || 'general',
-              affirmation_count: statement.affirmation_count || 0,
-              last_affirmed: statement.last_affirmed,
-              is_active: statement.is_active,
-              strength_rating: statement.strength_rating || 5.0
-            }));
-
-          if (statementsToMigrate.length > 0) {
-            const { data, error } = await supabase
-              .from('power_statements')
-              .insert(statementsToMigrate);
-
-            if (error) {
-              result.errors.push(`Power statements migration error: ${error.message}`);
-            } else {
-              result.migratedCounts.powerStatements = statementsToMigrate.length;
-            }
-          }
-        } catch (error: any) {
-          result.errors.push(`Power statements migration failed: ${error.message}`);
-        }
-      }
-
-      // Migrate manifestations
-      if (backup.data.manifestations && backup.data.manifestations.length > 0) {
-        try {
-          const manifestationsToMigrate = backup.data.manifestations
-            .filter(manifestation => !manifestation.id.startsWith('temp-'))
-            .map(manifestation => ({
-              title: manifestation.title,
-              description: manifestation.description,
-              visualization_notes: manifestation.visualization_notes,
-              target_date: manifestation.target_date,
-              achieved: manifestation.achieved || false,
-              achieved_at: manifestation.achieved_at,
-              achievement_notes: manifestation.achievement_notes,
-              energy_level: manifestation.energy_level || 5,
-              belief_level: manifestation.belief_level || 5,
-              tags: manifestation.tags || []
-            }));
-
-          if (manifestationsToMigrate.length > 0) {
-            const { data, error } = await supabase
-              .from('manifestations')
-              .insert(manifestationsToMigrate);
-
-            if (error) {
-              result.errors.push(`Manifestations migration error: ${error.message}`);
-            } else {
-              result.migratedCounts.manifestations = manifestationsToMigrate.length;
-            }
-          }
-        } catch (error: any) {
-          result.errors.push(`Manifestations migration failed: ${error.message}`);
-        }
-      }
-
-      // Calculate success
-      const totalMigrated = Object.values(result.migratedCounts).reduce((sum, count) => sum + count, 0);
-      const hasErrors = result.errors.length > 0;
+      // TODO: Implement backend migration endpoints
+      // This would involve creating batch import endpoints in the backend
+      // For now, we'll just return a placeholder result
       
-      result.success = totalMigrated > 0 && !hasErrors;
+      result.message = 'Data migration is not yet implemented. Please check back later.';
       
-      if (result.success) {
-        result.message = `Successfully migrated ${totalMigrated} items to Supabase`;
-        // Mark migration as complete
-        localStorage.setItem(this.MIGRATION_STATUS_KEY, JSON.stringify({
-          completed: true,
-          timestamp: new Date().toISOString(),
-          migratedCounts: result.migratedCounts
-        }));
-      } else if (totalMigrated > 0) {
-        result.message = `Partially migrated ${totalMigrated} items with ${result.errors.length} errors`;
-      } else {
-        result.message = 'No data found to migrate or migration failed completely';
-      }
-
     } catch (error: any) {
       result.errors.push(`Migration failed: ${error.message}`);
       result.message = 'Migration failed with errors';
@@ -390,68 +214,20 @@ export class DataMigrationService {
     return result;
   }
 
-  // Export user data from Supabase (backup functionality)
-  static async exportSupabaseData(): Promise<LocalStorageBackup | null> {
+  // Export user data from backend (backup functionality)
+  static async exportBackendData(): Promise<LocalStorageBackup | null> {
     try {
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) {
+      const token = localStorage.getItem('token');
+      if (!token) {
         throw new Error('User must be authenticated to export data');
       }
 
-      const backup: LocalStorageBackup = {
-        timestamp: new Date().toISOString(),
-        version: '1.0.0',
-        data: {}
-      };
-
-      // Export cards
-      const { data: cards, error: cardsError } = await supabase
-        .from('cards')
-        .select('*');
+      // TODO: Implement backend export endpoint
+      // This would involve creating a data export endpoint in the backend
       
-      if (!cardsError && cards) {
-        backup.data.cards = cards;
-      }
-
-      // Export daily tasks
-      const { data: dailyTasks, error: tasksError } = await supabase
-        .from('daily_tasks')
-        .select('*');
-      
-      if (!tasksError && dailyTasks) {
-        backup.data.dailyTasks = dailyTasks;
-      }
-
-      // Export habits
-      const { data: habits, error: habitsError } = await supabase
-        .from('habits')
-        .select('*');
-      
-      if (!habitsError && habits) {
-        backup.data.habits = habits;
-      }
-
-      // Export power statements
-      const { data: powerStatements, error: statementsError } = await supabase
-        .from('power_statements')
-        .select('*');
-      
-      if (!statementsError && powerStatements) {
-        backup.data.powerStatements = powerStatements;
-      }
-
-      // Export manifestations
-      const { data: manifestations, error: manifestationsError } = await supabase
-        .from('manifestations')
-        .select('*');
-      
-      if (!manifestationsError && manifestations) {
-        backup.data.manifestations = manifestations;
-      }
-
-      return backup;
+      return null;
     } catch (error) {
-      console.error('Failed to export Supabase data:', error);
+      console.error('Failed to export backend data:', error);
       return null;
     }
   }

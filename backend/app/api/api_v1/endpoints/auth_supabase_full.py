@@ -227,5 +227,6 @@ async def get_current_user(current_user: SupabaseUser = Depends(get_current_user
         "email": current_user.email,
         "email_verified": current_user.email_verified,
         "full_name": current_user.full_name,
-        "user_metadata": current_user.user_metadata
+        "user_metadata": current_user.user_metadata,
+        "is_active": True
     }

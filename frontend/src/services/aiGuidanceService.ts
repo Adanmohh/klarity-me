@@ -111,7 +111,7 @@ class AIGuidanceService {
   private baseUrl: string;
 
   constructor() {
-    this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8001';
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {

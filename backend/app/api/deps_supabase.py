@@ -1,21 +1,20 @@
 """
-Supabase authentication dependencies
+Authentication dependencies for FastAPI
 """
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from jose import jwt, JWTError
-import httpx
-import json
 
 from app.core.config import settings
-from app.services.supabase_client import supabase_service
+from app.db.dev_store import dev_store
 
-security = HTTPBearer(auto_error=False)
+# Create HTTPBearer instance for token extraction
+security = HTTPBearer()
 
 
 class SupabaseUser:
-    """User model for Supabase authentication"""
+    """User model for authentication"""
     def __init__(self, id: str, email: str, email_verified: bool = False, phone: str = None, app_metadata: dict = None, user_metadata: dict = None):
         self.id = id
         self.email = email
@@ -28,58 +27,93 @@ class SupabaseUser:
 
 
 async def get_current_user_supabase(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: HTTPAuthorizationCredentials = Depends(security)
 ) -> SupabaseUser:
     """
-    Validate Supabase JWT token and return user
+    Validate JWT token and return user
+    Uses our own JWT validation for OTP-generated tokens
     """
-    
-    if not credentials:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
+    import logging
+    logger = logging.getLogger(__name__)
     
     try:
-        # Validate token with Supabase
-        # Use the service client to verify the JWT
-        async with httpx.AsyncClient() as client:
-            response = await client.get(
-                f"{settings.SUPABASE_URL}/auth/v1/user",
-                headers={
-                    "Authorization": f"Bearer {credentials.credentials}",
-                    "apikey": settings.SUPABASE_ANON_KEY
-                }
+        logger.info(f"Received token: {credentials.credentials[:50]}...")
+        logger.info(f"Using SECRET_KEY: {settings.SECRET_KEY[:10]}...")
+        logger.info(f"Using ALGORITHM: {settings.ALGORITHM}")
+        
+        # Decode our JWT token
+        payload = jwt.decode(
+            credentials.credentials, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM],
+            options={"verify_aud": False}  # We're not using audience claim for now
+        )
+        
+        logger.info(f"Decoded payload: {payload}")
+        
+        # Get user info from token
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        logger.info(f"Extracted user_id: {user_id}, email: {email}")
+        
+        if not user_id or not email:
+            logger.error(f"Missing required fields - user_id: {user_id}, email: {email}")
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+                headers={"WWW-Authenticate": "Bearer"},
             )
+        
+        # Get user from dev store in dev mode
+        if settings.DEV_MODE:
+            logger.info(f"DEV_MODE is {settings.DEV_MODE}, looking up user in dev_store")
+            user = dev_store.get_user_by_id(user_id)
+            logger.info(f"User lookup by ID result: {user}")
             
-            if response.status_code != 200:
+            if not user:
+                # Try to get by email if ID lookup fails
+                logger.info(f"User not found by ID, trying email: {email}")
+                user = dev_store.get_user_by_email(email)
+                logger.info(f"User lookup by email result: {user}")
+            
+            if not user:
+                logger.error(f"User not found in dev_store for id={user_id}, email={email}")
+                logger.info(f"Current dev_store users: {list(dev_store.users.keys())}")
                 raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid authentication credentials",
-                    headers={"WWW-Authenticate": "Bearer"},
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="User not found"
                 )
             
-            user_data = response.json()
-            
             return SupabaseUser(
-                id=user_data["id"],
-                email=user_data["email"],
-                email_verified=user_data.get("email_confirmed_at") is not None,
-                phone=user_data.get("phone"),
-                app_metadata=user_data.get("app_metadata", {}),
-                user_metadata=user_data.get("user_metadata", {})
+                id=user.id,
+                email=user.email,
+                email_verified=user.is_verified,
+                phone=None,
+                app_metadata={},
+                user_metadata={"full_name": user.full_name}
+            )
+        else:
+            # Production mode - use Supabase (not implemented yet)
+            raise HTTPException(
+                status_code=status.HTTP_503,
+                detail="Supabase connection not configured"
             )
             
-    except httpx.RequestError as e:
-        raise HTTPException(
-            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Authentication service unavailable"
-        )
-    except Exception as e:
+    except JWTError as e:
+        logger.error(f"JWTError: {str(e)}")
+        logger.error(f"Token that failed: {credentials.credentials[:50]}...")
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication error",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
@@ -95,7 +129,7 @@ async def get_current_active_user_supabase(
 
 # Optional: For endpoints that can work with or without auth
 async def get_optional_user_supabase(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(HTTPBearer(auto_error=False))
 ) -> Optional[SupabaseUser]:
     """
     Get user if authenticated, otherwise return None
@@ -104,6 +138,37 @@ async def get_optional_user_supabase(
         return None
     
     try:
-        return await get_current_user_supabase(credentials)
-    except HTTPException:
+        # Use the same logic as get_current_user_supabase
+        payload = jwt.decode(
+            credentials.credentials, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM],
+            options={"verify_aud": False}
+        )
+        
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        if not user_id or not email:
+            return None
+        
+        if settings.DEV_MODE:
+            user = dev_store.get_user_by_id(user_id)
+            if not user:
+                user = dev_store.get_user_by_email(email)
+            
+            if not user:
+                return None
+            
+            return SupabaseUser(
+                id=user.id,
+                email=user.email,
+                email_verified=user.is_verified,
+                phone=None,
+                app_metadata={},
+                user_metadata={"full_name": user.full_name}
+            )
+        else:
+            return None
+    except:
         return None

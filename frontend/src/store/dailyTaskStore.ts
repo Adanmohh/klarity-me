@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist, createJSONStorage } from 'zustand/middleware';
 import { devtools } from 'zustand/middleware';
 import { DailyTask, DailyTaskLane, DailyTaskStatus, TaskDuration } from '../types';
-import { api } from '../services/api';
+import { dailyTasksAPI } from '../services/api';
 
 // Types for API responses and errors
 interface ApiError {
@@ -50,53 +50,57 @@ interface DailyTaskActions {
   // Offline support
   addPendingSync: (sync: Omit<PendingSync, 'timestamp'>) => void;
   removePendingSync: (id: string) => void;
-  processPendingSyncs: () => Promise<void>;
-  
-  // State management
-  clearError: () => void;
+  syncPending: () => Promise<void>;
   setOnlineStatus: (isOnline: boolean) => void;
-  syncWithServer: () => Promise<void>;
+  
+  // Utility
+  clearError: () => void;
+  resetState: () => void;
 }
 
-type DailyTaskStore = DailyTaskState & DailyTaskActions;
+interface DailyTaskStore extends DailyTaskState, DailyTaskActions {}
 
-// Helper function to handle Supabase errors
-const handleSupabaseError = (error: any): ApiError => {
-  if (error?.message) {
-    return { message: error.message };
-  }
-  if (error?.error_description) {
-    return { message: error.error_description };
-  }
-  return { message: 'An unexpected error occurred' };
+const initialState: DailyTaskState = {
+  tasks: [],
+  loading: false,
+  error: null,
+  isOnline: navigator.onLine,
+  lastSync: null,
+  pendingSyncs: []
 };
 
-// Helper function to generate local IDs for offline tasks
-const generateLocalId = () => `local-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+// Utility function for error handling
+const handleApiError = (error: any): ApiError => {
+  if (error.response) {
+    return {
+      message: error.response.data?.detail || error.response.data?.message || 'An error occurred',
+      status: error.response.status,
+      code: error.response.data?.code
+    };
+  }
+  if (error.request) {
+    return {
+      message: 'Network error - please check your connection',
+      status: 0,
+      code: 'NETWORK_ERROR'
+    };
+  }
+  return {
+    message: error.message || 'An unexpected error occurred',
+    code: 'UNKNOWN_ERROR'
+  };
+};
 
 export const useDailyTaskStore = create<DailyTaskStore>()(
   devtools(
     persist(
       (set, get) => ({
-        // State
-        tasks: [],
-        loading: false,
-        error: null,
-        isOnline: navigator.onLine,
-        lastSync: null,
-        pendingSyncs: [],
+        ...initialState,
 
-        // Core CRUD operations
         fetchTasks: async () => {
           set({ loading: true, error: null });
           try {
-            const { data: tasks, error } = await supabase
-              .from('daily_tasks')
-              .select('*')
-              .order('position', { ascending: true });
-
-            if (error) throw error;
-
+            const tasks = await dailyTasksAPI.getAllTasks();
             set({ 
               tasks: tasks || [], 
               loading: false, 
@@ -104,7 +108,7 @@ export const useDailyTaskStore = create<DailyTaskStore>()(
               error: null 
             });
           } catch (error) {
-            const apiError = handleSupabaseError(error);
+            const apiError = handleApiError(error);
             set({ error: apiError, loading: false });
             
             // If offline, don't show error - use cached data
@@ -131,48 +135,48 @@ export const useDailyTaskStore = create<DailyTaskStore>()(
           }
 
           try {
-            const { data: newTask, error } = await supabase
-              .from('daily_tasks')
-              .insert({
-                title: data.title,
-                description: data.description,
-                lane: data.lane,
-                duration: data.duration,
-                position: get().tasks.length,
-                status: 'pending'
-              })
-              .select()
-              .single();
+            const newTask = await dailyTasksAPI.createTask({
+              title: data.title,
+              description: data.description,
+              lane: data.lane,
+              duration: data.duration,
+              status: DailyTaskStatus.PENDING,
+              position: get().tasks.filter(t => t.lane === data.lane).length
+            });
 
-            if (error) throw error;
-
-            // Replace optimistic task with real task
+            // Replace optimistic update with real data
             set(state => ({
               tasks: state.tasks.map(t => t.id === tempId ? newTask : t),
-              error: null
+              lastSync: new Date().toISOString()
             }));
           } catch (error) {
-            const apiError = handleSupabaseError(error);
+            // Rollback optimistic update on error
+            get().rollbackOptimisticUpdate(tempId);
+            const apiError = handleApiError(error);
             set({ error: apiError });
             
-            // Add to pending syncs for retry
-            get().addPendingSync({
-              id: tempId,
-              action: 'create',
-              data
-            });
+            // If it's a network error, add to pending syncs
+            if (!navigator.onLine || apiError.code === 'NETWORK_ERROR') {
+              get().addPendingSync({
+                id: tempId,
+                action: 'create',
+                data
+              });
+              set({ isOnline: false });
+            }
+            throw error;
           }
         },
 
         updateTask: async (id, data) => {
-          const { isOnline, tasks } = get();
-          const originalTask = tasks.find(t => t.id === id);
-          
-          // Apply optimistic update
+          const originalTask = get().tasks.find(t => t.id === id);
+          if (!originalTask) return;
+
+          // Optimistic update
           get().updateTaskOptimistic(id, data);
-          
+
+          const { isOnline } = get();
           if (!isOnline) {
-            // Add to pending syncs
             get().addPendingSync({
               id,
               action: 'update',
@@ -182,45 +186,41 @@ export const useDailyTaskStore = create<DailyTaskStore>()(
           }
 
           try {
-            const { data: updatedTask, error } = await supabase
-              .from('daily_tasks')
-              .update(data)
-              .eq('id', id)
-              .select()
-              .single();
-
-            if (error) throw error;
-
+            const updatedTask = await dailyTasksAPI.updateTask(id, data);
+            
             // Update with server response
             set(state => ({
               tasks: state.tasks.map(t => t.id === id ? updatedTask : t),
-              error: null
+              lastSync: new Date().toISOString()
             }));
           } catch (error) {
-            const apiError = handleSupabaseError(error);
+            // Rollback on error
+            get().rollbackOptimisticUpdate(id, originalTask);
+            const apiError = handleApiError(error);
             set({ error: apiError });
             
-            // Add to pending syncs for retry
-            get().addPendingSync({
-              id,
-              action: 'update',
-              data
-            });
-            
-            // Rollback optimistic update on error
-            get().rollbackOptimisticUpdate(id, originalTask);
+            // If it's a network error, add to pending syncs
+            if (!navigator.onLine || apiError.code === 'NETWORK_ERROR') {
+              get().addPendingSync({
+                id,
+                action: 'update',
+                data
+              });
+              set({ isOnline: false });
+            }
+            throw error;
           }
         },
 
         deleteTask: async (id) => {
-          const { isOnline, tasks } = get();
-          const originalTask = tasks.find(t => t.id === id);
-          
-          // Apply optimistic update
+          const originalTask = get().tasks.find(t => t.id === id);
+          if (!originalTask) return;
+
+          // Optimistic delete
           get().deleteTaskOptimistic(id);
-          
+
+          const { isOnline } = get();
           if (!isOnline) {
-            // Add to pending syncs
             get().addPendingSync({
               id,
               action: 'delete'
@@ -229,90 +229,97 @@ export const useDailyTaskStore = create<DailyTaskStore>()(
           }
 
           try {
-            const { error } = await supabase
-              .from('daily_tasks')
-              .delete()
-              .eq('id', id);
-
-            if (error) throw error;
-
-            set({ error: null });
+            await dailyTasksAPI.deleteTask(id);
+            set({ lastSync: new Date().toISOString() });
           } catch (error) {
-            const apiError = handleSupabaseError(error);
+            // Rollback on error
+            get().rollbackOptimisticUpdate(id, originalTask);
+            const apiError = handleApiError(error);
             set({ error: apiError });
             
-            // Add to pending syncs for retry
-            get().addPendingSync({
-              id,
-              action: 'delete'
-            });
-            
-            // Rollback optimistic update on error
-            get().rollbackOptimisticUpdate(id, originalTask);
+            // If it's a network error, add to pending syncs
+            if (!navigator.onLine || apiError.code === 'NETWORK_ERROR') {
+              get().addPendingSync({
+                id,
+                action: 'delete'
+              });
+              set({ isOnline: false });
+            }
+            throw error;
           }
         },
 
-        // Convenience methods
         moveTask: async (id, toLane, duration) => {
-          await get().updateTask(id, { lane: toLane, duration });
+          const task = get().tasks.find(t => t.id === id);
+          if (!task) return;
+
+          const updates: Partial<DailyTask> = { lane: toLane };
+          if (toLane === DailyTaskLane.MAIN && duration) {
+            updates.duration = duration;
+          } else if (toLane === DailyTaskLane.CONTROLLER) {
+            updates.duration = undefined;
+          }
+
+          await get().updateTask(id, updates);
         },
 
         completeTask: async (id) => {
           await get().updateTask(id, { 
-            status: DailyTaskStatus.COMPLETED, 
-            completed_at: new Date().toISOString() 
+            status: DailyTaskStatus.COMPLETED,
+            completed_at: new Date().toISOString()
           });
         },
 
         reopenTask: async (id) => {
           await get().updateTask(id, { 
-            status: DailyTaskStatus.PENDING, 
-            completed_at: undefined 
+            status: DailyTaskStatus.PENDING,
+            completed_at: undefined
           });
         },
 
         moveToMain: async (id, duration) => {
-          await get().updateTask(id, { lane: DailyTaskLane.MAIN, duration });
+          await get().moveTask(id, DailyTaskLane.MAIN, duration);
         },
 
         moveToController: async (id) => {
-          await get().updateTask(id, { lane: DailyTaskLane.CONTROLLER, duration: undefined });
+          await get().moveTask(id, DailyTaskLane.CONTROLLER);
         },
 
-        // Optimistic updates
         createTaskOptimistic: (data) => {
-          const tempId = generateLocalId();
+          const tempId = `temp_${Date.now()}_${Math.random()}`;
           const newTask: DailyTask = {
             id: tempId,
+            user_id: 'temp_user',
             title: data.title,
             description: data.description,
             lane: data.lane,
             duration: data.duration,
             status: DailyTaskStatus.PENDING,
-            position: get().tasks.length,
-            user_id: 'temp-user',
-            created_at: new Date().toISOString()
+            position: get().tasks.filter(t => t.lane === data.lane).length,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           };
-          
-          set(state => ({ 
-            tasks: [...state.tasks, newTask],
-            error: null
+
+          set(state => ({
+            tasks: [...state.tasks, newTask]
           }));
-          
+
           return tempId;
         },
 
         updateTaskOptimistic: (id, data) => {
           set(state => ({
-            tasks: state.tasks.map(t => t.id === id ? { ...t, ...data } : t),
-            error: null
+            tasks: state.tasks.map(t => 
+              t.id === id 
+                ? { ...t, ...data, updated_at: new Date().toISOString() }
+                : t
+            )
           }));
         },
 
         deleteTaskOptimistic: (id) => {
           set(state => ({
-            tasks: state.tasks.filter(t => t.id !== id),
-            error: null
+            tasks: state.tasks.filter(t => t.id !== id)
           }));
         },
 
@@ -323,14 +330,13 @@ export const useDailyTaskStore = create<DailyTaskStore>()(
               tasks: state.tasks.map(t => t.id === id ? originalTask : t)
             }));
           } else {
-            // Remove optimistic task that failed to create
+            // Remove the optimistic task
             set(state => ({
               tasks: state.tasks.filter(t => t.id !== id)
             }));
           }
         },
 
-        // Offline support
         addPendingSync: (sync) => {
           set(state => ({
             pendingSyncs: [...state.pendingSyncs, {
@@ -342,122 +348,96 @@ export const useDailyTaskStore = create<DailyTaskStore>()(
 
         removePendingSync: (id) => {
           set(state => ({
-            pendingSyncs: state.pendingSyncs.filter(sync => sync.id !== id)
+            pendingSyncs: state.pendingSyncs.filter(s => s.id !== id)
           }));
         },
 
-        processPendingSyncs: async () => {
+        syncPending: async () => {
           const { pendingSyncs, isOnline } = get();
           if (!isOnline || pendingSyncs.length === 0) return;
 
-          // Process syncs in chronological order
-          const sortedSyncs = [...pendingSyncs].sort((a, b) => 
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-          );
+          const errors: string[] = [];
 
-          for (const sync of sortedSyncs) {
+          for (const sync of pendingSyncs) {
             try {
               switch (sync.action) {
                 case 'create':
                   if (sync.data) {
-                    const { data: newTask, error } = await supabase
-                      .from('daily_tasks')
-                      .insert({
-                        title: sync.data.title,
-                        description: sync.data.description,
-                        lane: sync.data.lane,
-                        duration: sync.data.duration,
-                        position: get().tasks.length,
-                        status: 'pending'
-                      })
-                      .select()
-                      .single();
-
-                    if (error) throw error;
-
-                    // Replace temp task with real task
+                    const newTask = await dailyTasksAPI.createTask({
+                      title: sync.data.title!,
+                      description: sync.data.description,
+                      lane: sync.data.lane as DailyTaskLane,
+                      duration: sync.data.duration as TaskDuration,
+                      status: DailyTaskStatus.PENDING,
+                      position: 0
+                    });
+                    
+                    // Replace temp ID with real ID
                     set(state => ({
-                      tasks: state.tasks.map(t => t.id === sync.id ? newTask : t)
+                      tasks: state.tasks.map(t => 
+                        t.id === sync.id ? newTask : t
+                      )
                     }));
                   }
                   break;
 
                 case 'update':
                   if (sync.data) {
-                    const { error } = await supabase
-                      .from('daily_tasks')
-                      .update(sync.data)
-                      .eq('id', sync.id);
-
-                    if (error) throw error;
+                    await dailyTasksAPI.updateTask(sync.id, sync.data);
                   }
                   break;
 
                 case 'delete':
-                  const { error } = await supabase
-                    .from('daily_tasks')
-                    .delete()
-                    .eq('id', sync.id);
-
-                  if (error) throw error;
+                  await dailyTasksAPI.deleteTask(sync.id);
                   break;
               }
 
-              // Remove successfully processed sync
+              // Remove successful sync
               get().removePendingSync(sync.id);
             } catch (error) {
-              console.warn(`Failed to sync ${sync.action} for task ${sync.id}:`, error);
-              // Keep the sync for retry later
+              errors.push(`Failed to sync ${sync.action} for task ${sync.id}`);
             }
           }
-        },
 
-        // State management
-        clearError: () => {
-          set({ error: null });
+          if (errors.length > 0) {
+            set({ error: { message: errors.join(', ') } });
+          } else {
+            set({ lastSync: new Date().toISOString() });
+          }
+
+          // Refresh tasks after sync
+          await get().fetchTasks();
         },
 
         setOnlineStatus: (isOnline) => {
           set({ isOnline });
           if (isOnline) {
-            // Process pending syncs and sync when coming back online
-            get().processPendingSyncs();
-            get().syncWithServer();
+            // Attempt to sync when coming back online
+            get().syncPending();
           }
         },
 
-        syncWithServer: async () => {
-          const { isOnline } = get();
-          if (!isOnline) return;
+        clearError: () => set({ error: null }),
 
-          try {
-            // Process any pending syncs first
-            await get().processPendingSyncs();
-            
-            // Then refresh all tasks to ensure we have the latest data
-            await get().fetchTasks();
-          } catch (error) {
-            console.error('Sync failed:', error);
-          }
-        }
+        resetState: () => set(initialState)
       }),
       {
-        name: 'daily-task-storage',
+        name: 'daily-tasks-storage',
         storage: createJSONStorage(() => localStorage),
         partialize: (state) => ({
           tasks: state.tasks,
-          lastSync: state.lastSync,
-          pendingSyncs: state.pendingSyncs
+          pendingSyncs: state.pendingSyncs,
+          lastSync: state.lastSync
         })
       }
     ),
     {
-      name: 'daily-task-store'
+      name: 'DailyTaskStore'
     }
   )
 );
 
-// Set up online/offline event listeners
+// Set up online/offline listeners
 if (typeof window !== 'undefined') {
   window.addEventListener('online', () => {
     useDailyTaskStore.getState().setOnlineStatus(true);
@@ -466,16 +446,4 @@ if (typeof window !== 'undefined') {
   window.addEventListener('offline', () => {
     useDailyTaskStore.getState().setOnlineStatus(false);
   });
-
-  // Realtime disabled - using backend API
-  // setTimeout(() => {
-  //   useDailyTaskStore.getState().subscribeToRealtime();
-  // }, 100);
 }
-
-// Realtime disabled - using backend API
-// if (typeof window !== 'undefined') {
-//   window.addEventListener('beforeunload', () => {
-//     useDailyTaskStore.getState().unsubscribeFromRealtime();
-//   });
-// }

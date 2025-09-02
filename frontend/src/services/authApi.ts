@@ -34,17 +34,30 @@ export const authApi = {
   },
 
   // OTP Authentication
-  async requestOtp(email: string) {
-    const { data } = await api.post<{ message: string }>('/auth-v2/otp/request', {
-      email
+  async requestOtp(email: string, fullName?: string) {
+    const { data } = await api.post<{ 
+      message: string; 
+      is_new_user?: boolean;
+      needs_activation?: boolean;
+      email?: string;
+    }>('/auth-otp/request-otp', {
+      email,
+      full_name: fullName || ''
     });
     return data;
   },
 
-  async verifyOtp(email: string, token: string) {
-    const { data } = await api.post<AuthResponse>('/auth-v2/otp/verify', {
+  async verifyOtp(email: string, otp: string) {
+    const { data } = await api.post<AuthResponse>('/auth-otp/verify-otp', {
       email,
-      token
+      otp
+    });
+    return data;
+  },
+  
+  async resendOtp(email: string) {
+    const { data } = await api.post<{ message: string; purpose?: string }>('/auth-otp/resend-otp', {
+      email
     });
     return data;
   },
@@ -59,8 +72,18 @@ export const authApi = {
 
   // User Management
   async getCurrentUser() {
-    const { data } = await api.get('/auth-v2/me');
-    return data;
+    // Try OTP endpoint first, fallback to auth-v2
+    try {
+      const { data } = await api.get('/auth-otp/me');
+      return data;
+    } catch (error: any) {
+      if (error.response?.status === 404) {
+        // Fallback to auth-v2 endpoint
+        const { data } = await api.get('/auth-v2/me');
+        return data;
+      }
+      throw error;
+    }
   },
 
   async logout() {

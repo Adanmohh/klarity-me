@@ -82,7 +82,7 @@ export const OTPAuth: React.FC = () => {
     setMessage('');
 
     try {
-      const data = await authApi.requestOtp(email);
+      const data = await authApi.requestOtp(email, fullName);
       setMessage(data.message || `We've sent a 6-digit code to ${email}`);
       setStep('verify');
       setCountdown(60);
@@ -125,8 +125,8 @@ export const OTPAuth: React.FC = () => {
     setMessage('');
 
     try {
-      const data = await authApi.requestOtp(email);
-      setMessage('New code sent to your email');
+      const data = await authApi.resendOtp(email);
+      setMessage(data.message || 'New code sent to your email');
       setCountdown(60);
     } catch (err: any) {
       setError(err.response?.data?.detail || err.message || 'Failed to resend OTP');

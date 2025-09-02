@@ -3,13 +3,17 @@ OTP-based authentication endpoints
 """
 from datetime import timedelta
 from typing import Any, Optional
-from fastapi import APIRouter, HTTPException, status
+from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
+from jose import jwt, JWTError
 
 from app.core import security
 from app.core.config import settings
 from app.db.dev_store import dev_store
 from app.services.email_service import email_service
+
+security_bearer = HTTPBearer(auto_error=False)
 
 router = APIRouter()
 
@@ -71,13 +75,18 @@ async def request_otp(data: RequestOTPRequest) -> Any:
             }
         else:
             # Send login OTP
-            email_service.send_otp_email(data.email, purpose="login")
-            return {
+            otp = email_service.send_otp_email(data.email, purpose="login")
+            result = {
                 "message": "Login code sent to your email.",
                 "is_new_user": False,
                 "needs_activation": False,
                 "email": data.email
             }
+            # In dev mode, include the OTP for testing
+            from app.core.config import settings
+            if settings.DEV_MODE:
+                result["debug_otp"] = otp
+            return result
 
 @router.post("/verify-otp")
 async def verify_otp(data: VerifyOTPRequest) -> Token:
@@ -117,10 +126,12 @@ async def verify_otp(data: VerifyOTPRequest) -> Token:
             detail="Authentication failed"
         )
     
-    # Create access token
+    # Create access token with email
     access_token_expires = timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES)
     access_token = security.create_access_token(
-        authenticated_user.id, expires_delta=access_token_expires
+        authenticated_user.id, 
+        expires_delta=access_token_expires,
+        email=authenticated_user.email
     )
     
     return Token(
@@ -149,28 +160,79 @@ async def resend_otp(data: ResendOTPRequest) -> Any:
     purpose = "activation" if not user.is_verified else "login"
     
     # Send OTP
-    email_service.send_otp_email(data.email, purpose=purpose)
+    otp = email_service.send_otp_email(data.email, purpose=purpose)
     
-    return {
+    result = {
         "message": f"New code sent to {data.email}",
         "purpose": purpose
     }
+    
+    # In dev mode, include the OTP for testing
+    from app.core.config import settings
+    if settings.DEV_MODE:
+        result["debug_otp"] = otp
+    
+    return result
 
-@router.get("/me", response_model=User)
-async def read_users_me() -> Any:
-    """Get current user - returns test user for dev"""
-    # For dev, return the test user
-    test_user = dev_store.get_user_by_email("test@example.com")
-    if test_user:
-        return User(
-            id=test_user.id,
-            email=test_user.email,
-            full_name=test_user.full_name,
-            is_verified=test_user.is_verified,
-            is_active=test_user.is_active
+@router.get("/me")
+async def read_users_me(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security_bearer)
+) -> Any:
+    """Get current user from token"""
+    
+    if not credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
         )
     
-    raise HTTPException(status_code=404, detail="User not found")
+    try:
+        # Decode our JWT token
+        payload = jwt.decode(
+            credentials.credentials, 
+            settings.SECRET_KEY, 
+            algorithms=[settings.ALGORITHM],
+            options={"verify_aud": False}
+        )
+        
+        # Get user info from token
+        user_id = payload.get("sub")
+        email = payload.get("email")
+        
+        if not user_id or not email:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid token payload",
+                headers={"WWW-Authenticate": "Bearer"},
+            )
+        
+        # Get user from dev store
+        user = dev_store.get_user_by_id(user_id)
+        if not user:
+            # Try to get by email if ID lookup fails
+            user = dev_store.get_user_by_email(email)
+        
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+        
+        return {
+            "id": user.id,
+            "email": user.email,
+            "full_name": user.full_name,
+            "is_verified": user.is_verified,
+            "is_active": user.is_active
+        }
+            
+    except JWTError as e:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
 
 @router.post("/logout")
 async def logout() -> Any:

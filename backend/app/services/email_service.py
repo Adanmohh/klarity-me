@@ -83,7 +83,8 @@ class EmailService:
             subject = f"Your {self.app_name} login code"
             body = self._get_login_email_body(otp)
         
-        return self._send_email(email, subject, body, otp)
+        self._send_email(email, subject, body, otp)
+        return otp  # Return the OTP for dev mode
     
     def _get_activation_email_body(self, otp: str) -> str:
         """Get activation email body"""

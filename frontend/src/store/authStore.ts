@@ -28,7 +28,9 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   setAuth: (user, token, refreshToken) => {
     // Store the token
     const tokenToStore = typeof token === 'string' ? token : token.access_token;
+    // Store both 'token' and 'access_token' for compatibility
     localStorage.setItem('token', tokenToStore);
+    localStorage.setItem('access_token', tokenToStore);
     localStorage.setItem('user', JSON.stringify(user));
     if (refreshToken) {
       localStorage.setItem('refresh_token', refreshToken);
@@ -50,6 +52,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
       console.error('Error signing out:', error);
     }
     localStorage.removeItem('token');
+    localStorage.removeItem('access_token');
     localStorage.removeItem('user');
     localStorage.removeItem('refresh_token');
     set({ 
@@ -76,55 +79,49 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     
     try {
-      // Check for stored token
-      const storedToken = localStorage.getItem('token');
+      // Check for stored token (check both keys for compatibility)
+      const storedToken = localStorage.getItem('access_token') || localStorage.getItem('token');
       const storedRefreshToken = localStorage.getItem('refresh_token');
+      const storedUser = localStorage.getItem('user');
       
-      if (storedToken) {
+      if (storedToken && storedUser) {
         try {
-          // Validate token with backend
-          const userData = await authApi.getCurrentUser();
+          // Parse stored user
+          const user = JSON.parse(storedUser);
           
+          // First set the auth state from localStorage (optimistic)
           set({
-            user: userData,
+            user: user,
             token: storedToken,
             refreshToken: storedRefreshToken,
             isAuthenticated: true,
             isLoading: false,
             initialized: true
           });
-        } catch (error: any) {
-          // Token might be expired, try to refresh
-          if (storedRefreshToken && error.response?.status === 401) {
-            try {
-              const refreshData = await authApi.refreshToken(storedRefreshToken);
-              
-              set({
-                user: refreshData.user,
-                token: refreshData.access_token,
-                refreshToken: refreshData.refresh_token,
-                isAuthenticated: true,
-                isLoading: false,
-                initialized: true
-              });
-              
-              localStorage.setItem('token', refreshData.access_token);
-              if (refreshData.refresh_token) {
-                localStorage.setItem('refresh_token', refreshData.refresh_token);
+          
+          // Then validate token with backend (async verification)
+          authApi.getCurrentUser().then(
+            (userData) => {
+              // Update with fresh user data from backend
+              set({ user: userData });
+              localStorage.setItem('user', JSON.stringify(userData));
+            },
+            (error) => {
+              // Token is invalid or expired
+              if (error.response?.status === 401) {
+                console.log('Token expired, clearing auth');
+                get().clearAuth();
               }
-            } catch (refreshError) {
-              // Refresh failed, clear auth
-              get().clearAuth();
-              set({ initialized: true });
             }
-          } else {
-            // Token invalid, clear auth
-            get().clearAuth();
-            set({ initialized: true });
-          }
+          );
+        } catch (error) {
+          console.error('Error parsing stored user:', error);
+          // Clear invalid data
+          get().clearAuth();
+          set({ initialized: true });
         }
       } else {
-        // No stored token
+        // No stored token or user
         set({ isLoading: false, initialized: true });
       }
     } catch (error) {
