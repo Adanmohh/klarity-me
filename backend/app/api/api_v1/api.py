@@ -1,6 +1,6 @@
 from fastapi import APIRouter
 
-from app.api.api_v1.endpoints import auth_supabase, auth_supabase_full, auth_otp, cards_supabase, focus_tasks_dev, daily_tasks, identity_evolution_supabase
+from app.api.api_v1.endpoints import auth_supabase, auth_supabase_full, auth_otp, cards_supabase, focus_tasks_dev, daily_tasks, identity_evolution_supabase, ai_coach
 from app.core.config import settings
 
 api_router = APIRouter()
@@ -20,3 +20,4 @@ else:
     api_router.include_router(focus_tasks.router, prefix="/focus-tasks", tags=["focus-tasks"])
 api_router.include_router(daily_tasks.router, prefix="/daily-tasks", tags=["daily-tasks"])
 api_router.include_router(identity_evolution_supabase.router, prefix="/identity-evolution", tags=["identity-evolution"])
+api_router.include_router(ai_coach.router, prefix="/ai-coach", tags=["ai-coach"])

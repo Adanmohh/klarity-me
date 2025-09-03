@@ -117,9 +117,10 @@ class NotificationService {
       return;
     }
 
-    const permissions = await this.requestPermission();
+    const permissions = this.getPermissionStatus();
     if (!permissions.granted) {
-      throw new Error('Notification permission not granted');
+      // Silently skip if permission not granted instead of throwing error
+      return;
     }
 
     const now = new Date();
@@ -239,7 +240,11 @@ class NotificationService {
       try {
         await this.scheduleHabitReminder(habit);
       } catch (error) {
-        console.error(`Failed to schedule reminder for habit ${habit.habitId}:`, error);
+        // Only log errors if notifications permission was granted
+        const permissions = this.getPermissionStatus();
+        if (permissions.granted) {
+          console.error(`Failed to schedule reminder for habit ${habit.habitId}:`, error);
+        }
       }
     }
   }
