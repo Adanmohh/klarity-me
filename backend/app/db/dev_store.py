@@ -27,6 +27,7 @@ class DevCard:
     emoji: str = "📝"
     color: str = "#3b82f6"
     position: int = 0
+    status: str = "queued"  # queued, active, on-hold, completed
     user_id: str = ""
     created_at: datetime = field(default_factory=datetime.now)
     updated_at: datetime = field(default_factory=datetime.now)

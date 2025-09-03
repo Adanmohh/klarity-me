@@ -57,7 +57,7 @@ async def get_cards(
                 emoji=card.emoji,
                 color=card.color,
                 position=card.position,
-                status="queued",
+                status=card.status if hasattr(card, 'status') else "queued",
                 sessions_count=0,
                 momentum_score=0,
                 created_at=card.created_at,
@@ -86,7 +86,7 @@ async def get_card(
                     emoji=card.emoji,
                     color=card.color,
                     position=card.position,
-                    status="queued",
+                    status=card.status if hasattr(card, 'status') else "queued",
                     sessions_count=0,
                     momentum_score=0,
                     created_at=card.created_at,
@@ -146,7 +146,9 @@ async def update_card(
         
         # Update card
         updates = {k: v for k, v in card_in.dict().items() if v is not None}
+        print(f"DEBUG: Updating card {card_id} with: {updates}")
         updated_card = dev_store.update_card(card_id, **updates)
+        print(f"DEBUG: Updated card status: {updated_card.status if hasattr(updated_card, 'status') else 'NO STATUS'}")
         
         if not updated_card:
             raise HTTPException(status_code=404, detail="Card not found")
@@ -158,7 +160,7 @@ async def update_card(
             emoji=updated_card.emoji,
             color=updated_card.color,
             position=updated_card.position,
-            status="queued",
+            status=updated_card.status if hasattr(updated_card, 'status') else "queued",
             sessions_count=0,
             momentum_score=0,
             created_at=updated_card.created_at,
