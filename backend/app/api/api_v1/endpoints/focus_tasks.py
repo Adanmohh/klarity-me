@@ -25,7 +25,7 @@ router = APIRouter()
 async def read_all_focus_tasks(
     *,
     db: AsyncSession = Depends(get_db),
-    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_user_supabase),
 ) -> Any:
     """Get all focus tasks for the current user"""
     if settings.DEV_MODE:
@@ -43,7 +43,7 @@ async def read_focus_tasks_by_card(
     *,
     db: AsyncSession = Depends(get_db),
     card_id: UUID,
-    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Check card ownership in dev mode
@@ -66,7 +66,7 @@ async def create_focus_task(
     *,
     db: AsyncSession = Depends(get_db),
     task_in: FocusTaskCreate,
-    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Check card ownership in dev mode
@@ -88,7 +88,7 @@ async def update_focus_task(
     db: AsyncSession = Depends(get_db),
     task_id: UUID,
     task_in: FocusTaskUpdate,
-    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Mock implementation for dev mode
@@ -122,7 +122,7 @@ async def delete_focus_task(
     *,
     db: AsyncSession = Depends(get_db),
     task_id: UUID,
-    current_user: SupabaseUser = Depends(deps_supabase.get_current_active_user_supabase),
+    current_user: SupabaseUser = Depends(deps_supabase.get_current_user_supabase),
 ) -> Any:
     if settings.DEV_MODE:
         # Mock implementation for dev mode
