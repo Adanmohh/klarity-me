@@ -36,6 +36,13 @@ import './styles/globals.css';
 import './index.css';
 import { useAuthStore } from './store/authStore';
 
+// New UI Components
+import { NotificationCenter } from './components/notifications/NotificationCenter';
+import { OnboardingFlow } from './components/onboarding/OnboardingFlow';
+import { CompletionMetrics } from './components/analytics/CompletionMetrics';
+import { useGlobalKeyboardShortcuts, formatShortcut } from './hooks/useGlobalKeyboardShortcuts';
+import { KeyboardShortcutsHelp } from './components/help/KeyboardShortcutsHelp';
+
 function AppContent() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -44,15 +51,33 @@ function AppContent() {
   const [isCommandPaletteOpen, setIsCommandPaletteOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const { cards, fetchCards, createCard } = useCardStore();
   const { tasks } = useDailyTaskStore();
   const { isAuthenticated, initializeAuth } = useAuthStore();
+  
+  // Use the global keyboard shortcuts hook
+  const { 
+    shortcuts, 
+    isHelpOpen, 
+    setIsHelpOpen,
+    isSearchOpen: globalSearchOpen,
+    setIsSearchOpen: setGlobalSearchOpen,
+    isCreateModalOpen: globalCreateOpen,
+    setIsCreateModalOpen: setGlobalCreateOpen
+  } = useGlobalKeyboardShortcuts();
 
   // Initialize auth on mount
   useEffect(() => {
     initializeAuth();
-  }, [initializeAuth]);
+    
+    // Check if user has seen onboarding
+    const hasSeenOnboarding = localStorage.getItem('hasSeenOnboarding');
+    if (!hasSeenOnboarding && isAuthenticated) {
+      setShowOnboarding(true);
+    }
+  }, [initializeAuth, isAuthenticated]);
 
   useEffect(() => {
     // Load initial data
@@ -147,9 +172,8 @@ function AppContent() {
   // Using FocusPage from ./pages/FocusPage - removed local definition
 
   const AnalyticsPage = () => (
-    <div className="p-8 text-center">
-      <h2 className="text-3xl font-bold text-primary-black mb-4">Analytics</h2>
-      <p className="text-gray-500">Coming soon...</p>
+    <div className="p-8">
+      <CompletionMetrics />
     </div>
   );
 
@@ -300,9 +324,33 @@ function AppContent() {
       />
       
       <GlobalSearch
-        isOpen={isSearchOpen}
-        onClose={() => setIsSearchOpen(false)}
+        isOpen={isSearchOpen || globalSearchOpen}
+        onClose={() => {
+          setIsSearchOpen(false);
+          setGlobalSearchOpen(false);
+        }}
       />
+      
+      {/* Notification Center */}
+      <NotificationCenter />
+      
+      {/* Onboarding Flow */}
+      {showOnboarding && (
+        <OnboardingFlow 
+          onComplete={() => {
+            setShowOnboarding(false);
+            localStorage.setItem('hasSeenOnboarding', 'true');
+          }}
+        />
+      )}
+      
+      {/* Keyboard Shortcuts Help */}
+      {isHelpOpen && (
+        <KeyboardShortcutsHelp 
+          shortcuts={shortcuts}
+          onClose={() => setIsHelpOpen(false)}
+        />
+      )}
     </>
   );
 }

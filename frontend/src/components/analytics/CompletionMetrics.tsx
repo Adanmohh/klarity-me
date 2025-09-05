@@ -13,6 +13,17 @@ import {
 } from 'lucide-react';
 import { format, subDays, startOfWeek, endOfWeek } from 'date-fns';
 
+// Simple eachDayOfInterval implementation
+function eachDayOfInterval({ start, end }: { start: Date; end: Date }): Date[] {
+  const days: Date[] = [];
+  const current = new Date(start);
+  while (current <= end) {
+    days.push(new Date(current));
+    current.setDate(current.getDate() + 1);
+  }
+  return days;
+}
+
 interface TaskMetrics {
   completed: number;
   pending: number;

@@ -8,7 +8,7 @@ import { Card } from '../types';
 import { useCardStore } from '../store/cardStore';
 import { FocusSessionView } from '../components/cards/FocusSessionView';
 import { GlassCard } from '../components/ui/GlassCard';
-import { Button } from '../components/ui/Button';
+import { AccessibleButton } from '../components/ui/AccessibleButton';
 import { Icons } from '../components/icons/LucideIcons';
 
 // Sortable Card Component
@@ -98,46 +98,47 @@ const SortableCard: React.FC<{
           <div className="flex items-center gap-2">
             {/* Enter Focus Mode button - ONLY for active card */}
             {isActive ? (
-              <Button
+              <AccessibleButton
                 variant="primary"
                 size="sm"
                 onClick={onEnterFocus}
+                ariaLabel="Enter focus mode for this card"
               >
                 <Icons.Focus className="w-4 h-4 mr-1" />
                 Enter Focus
-              </Button>
+              </AccessibleButton>
             ) : null}
 
             {/* Quick Actions */}
             {isActive ? (
-              <Button
+              <AccessibleButton
                 variant="secondary"
                 size="sm"
                 onClick={onPauseCard}
-                title="Pause this card"
+                ariaLabel="Pause this card"
               >
                 <Icons.Pause className="w-4 h-4" />
-              </Button>
+              </AccessibleButton>
             ) : card.status === 'on-hold' ? (
-              <Button
+              <AccessibleButton
                 variant="warning"
                 size="sm"
                 onClick={onActivateCard}
-                title="Resume this card"
+                ariaLabel="Resume this card"
               >
                 <Icons.Play className="w-4 h-4" />
                 <span className="ml-1">Resume</span>
-              </Button>
+              </AccessibleButton>
             ) : (
-              <Button
+              <AccessibleButton
                 variant="ghost"
                 size="sm"
                 onClick={onActivateCard}
-                title="Set as active card"
+                ariaLabel="Set as active card"
               >
                 <Icons.Play className="w-4 h-4" />
                 <span className="ml-1">Activate</span>
-              </Button>
+              </AccessibleButton>
             )}
           </div>
         </div>
@@ -306,9 +307,9 @@ export const FocusPage: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 mb-6">
               Create some cards to start focusing on your projects.
             </p>
-            <Button variant="primary">
+            <AccessibleButton variant="primary" ariaLabel="Create your first focus card">
               Create Your First Card
-            </Button>
+            </AccessibleButton>
           </GlassCard>
         ) : (
           <>
