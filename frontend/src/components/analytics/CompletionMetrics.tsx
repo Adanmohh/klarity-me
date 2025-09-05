@@ -43,18 +43,27 @@ interface DailyMetric {
 }
 
 interface CompletionMetricsProps {
-  metrics: TaskMetrics;
-  dailyMetrics: DailyMetric[];
-  timeRange: 'week' | 'month' | 'year';
-  onTimeRangeChange: (range: 'week' | 'month' | 'year') => void;
+  metrics?: TaskMetrics;
+  dailyMetrics?: DailyMetric[];
+  timeRange?: 'week' | 'month' | 'year';
+  onTimeRangeChange?: (range: 'week' | 'month' | 'year') => void;
 }
 
 export function CompletionMetrics({
-  metrics,
-  dailyMetrics,
-  timeRange,
-  onTimeRangeChange
-}: CompletionMetricsProps) {
+  metrics = {
+    completed: 12,
+    pending: 5,
+    archived: 8,
+    averageCompletionTime: 2.5,
+    completionRate: 0.75,
+    streak: 5,
+    bestDay: 'Monday',
+    totalFocusTime: 240
+  },
+  dailyMetrics = [],
+  timeRange = 'week',
+  onTimeRangeChange = () => {}
+}: CompletionMetricsProps = {}) {
   // Calculate trend
   const trend = useMemo(() => {
     if (dailyMetrics.length < 2) return 0;

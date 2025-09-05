@@ -121,7 +121,7 @@ const SortableCard: React.FC<{
               </AccessibleButton>
             ) : card.status === 'on-hold' ? (
               <AccessibleButton
-                variant="warning"
+                variant="secondary"
                 size="sm"
                 onClick={onActivateCard}
                 ariaLabel="Resume this card"
