@@ -148,11 +148,14 @@ class DevStore:
     
     def create_card(self, user_id: str, title: str, **kwargs) -> DevCard:
         """Create a new card"""
+        # Extract position from kwargs if provided, otherwise use length of cards
+        position = kwargs.pop('position', len(self.cards))
+        
         card = DevCard(
             id=str(uuid.uuid4()),
             title=title,
             user_id=user_id,
-            position=len(self.cards),
+            position=position,
             **kwargs
         )
         self.cards[card.id] = card

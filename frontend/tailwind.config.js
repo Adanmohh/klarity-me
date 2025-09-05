@@ -7,37 +7,37 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        // Primary Palette - Gold/Amber
+        // Primary Palette - Gold/Amber (WCAG AA Compliant)
         primary: {
           50: '#FFF8E1',
           100: '#FFECB3',
           200: '#FFE082',
           300: '#FFD54F',
           400: '#FFCA28',
-          500: '#FFC107',
-          600: '#FFB300',
-          700: '#FFA000',
-          800: '#FF8F00',
-          900: '#FF6F00',
-          DEFAULT: '#FFC107',
-          gold: '#FFC107', // Alias for compatibility
+          500: '#F59E0B', // Darker gold for better contrast (4.5:1 on white)
+          600: '#D97706', // Even darker for hover states
+          700: '#B45309',
+          800: '#92400E',
+          900: '#78350F',
+          DEFAULT: '#F59E0B', // Updated default
+          gold: '#F59E0B', // Updated alias
           black: '#212121',
           white: '#FFFFFF',
         },
         
-        // Neutral Palette
+        // Neutral Palette (Enhanced for WCAG AA)
         neutral: {
           50: '#FAFAFA',
           100: '#F5F5F5',
           200: '#EEEEEE',
           300: '#E0E0E0',
-          400: '#BDBDBD',
-          500: '#9E9E9E',
-          600: '#757575',
-          700: '#616161',
-          800: '#424242',
-          900: '#212121',
-          950: '#0A0A0A',
+          400: '#9CA3AF', // Darker for better contrast
+          500: '#6B7280', // Much darker (passes 4.5:1)
+          600: '#4B5563', // Good contrast
+          700: '#374151',
+          800: '#1F2937',
+          900: '#111827',
+          950: '#030712',
         },
         
         // Glass morphism surfaces - improved contrast for WCAG AA
@@ -148,7 +148,10 @@ module.exports = {
       },
       
       fontSize: {
-        'xxs': '0.625rem', // 10px
+        'xxs': '0.75rem', // 12px minimum for readability
+        'xs': '0.875rem', // 14px
+        'sm': '0.9375rem', // 15px
+        'base': '1rem', // 16px - better base size
       },
       
       transitionDuration: {

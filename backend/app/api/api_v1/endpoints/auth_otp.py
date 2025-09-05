@@ -88,6 +88,50 @@ async def request_otp(data: RequestOTPRequest) -> Any:
                 result["debug_otp"] = otp
             return result
 
+@router.get("/demo-login")
+async def demo_login() -> Token:
+    """
+    Demo login endpoint for DEV_MODE.
+    Automatically creates and logs in a demo user.
+    """
+    if not settings.DEV_MODE:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Demo login is only available in development mode"
+        )
+    
+    # Create or get demo user
+    demo_email = "demo@focuscards.local"
+    demo_user = dev_store.get_user_by_email(demo_email)
+    
+    if not demo_user:
+        demo_user = dev_store.create_user(
+            email=demo_email,
+            full_name="Demo User"
+        )
+        # Mark as verified
+        demo_user.is_verified = True
+        demo_user.is_active = True
+    
+    # Create access token with email included
+    access_token_expires = timedelta(days=7)  # Longer expiry for demo
+    access_token = security.create_access_token(
+        subject=demo_user.id,
+        expires_delta=access_token_expires,
+        email=demo_user.email
+    )
+    
+    return Token(
+        access_token=access_token,
+        user={
+            "id": demo_user.id,
+            "email": demo_user.email,
+            "full_name": demo_user.full_name,
+            "is_verified": demo_user.is_verified,
+            "is_active": demo_user.is_active
+        }
+    )
+
 @router.post("/verify-otp")
 async def verify_otp(data: VerifyOTPRequest) -> Token:
     """

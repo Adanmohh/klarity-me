@@ -89,5 +89,11 @@ export const authApi = {
   async logout() {
     const { data } = await api.post('/auth-v2/logout');
     return data;
+  },
+
+  // Demo login for development
+  async demoLogin() {
+    const { data } = await api.get<AuthResponse>('/auth-otp/demo-login');
+    return data;
   }
 };

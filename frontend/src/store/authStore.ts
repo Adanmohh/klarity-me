@@ -79,10 +79,32 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     set({ isLoading: true });
     
     try {
+      // Check if we're in development mode (can be configured via env variable)
+      const isDemoMode = process.env.NODE_ENV === 'development' && 
+                        !localStorage.getItem('disable_demo_mode');
+      
       // Check for stored token (check both keys for compatibility)
       const storedToken = localStorage.getItem('access_token') || localStorage.getItem('token');
       const storedRefreshToken = localStorage.getItem('refresh_token');
       const storedUser = localStorage.getItem('user');
+      
+      if (isDemoMode && !storedToken) {
+        // Auto-login with demo user in development mode
+        try {
+          const demoResponse = await authApi.demoLogin();
+          get().setAuth(
+            demoResponse.user,
+            { access_token: demoResponse.access_token, token_type: 'bearer' },
+            demoResponse.refresh_token
+          );
+          set({ initialized: true });
+          console.log('Auto-logged in with demo user');
+          return;
+        } catch (error) {
+          console.error('Demo login failed:', error);
+          // Fall through to normal auth flow
+        }
+      }
       
       if (storedToken && storedUser) {
         try {

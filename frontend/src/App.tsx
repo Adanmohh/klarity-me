@@ -230,26 +230,6 @@ function AppContent() {
               <FocusPage />
             </ProtectedRoute>
           } />
-          <Route path="/dashboard" element={
-            <ProtectedRoute>
-              <FocusPage />
-            </ProtectedRoute>
-          } />
-          <Route path="/deep-work-old" element={
-            <ProtectedRoute>
-              <DeepWorkDashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/dashboard-old" element={
-            <ProtectedRoute>
-              <Dashboard
-                cards={cards}
-                dailyTasksCount={tasks.length}
-                completedToday={5}
-                weeklyStreak={7}
-              />
-            </ProtectedRoute>
-          } />
           <Route path="/focus" element={
             <ProtectedRoute>
               <FocusPage />
